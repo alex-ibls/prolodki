@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #f4f9fd;
+  --ink: #1c3d5a;
+  --navy: #1f6cb5;
+  --copper: #2a7ad4;
+  --line: #d5e6f4;
+  --card: #ffffff;
+  --moss: #2a8a72;
+  --muted: #5c7690;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-navy: var(--navy);
+  --color-copper: var(--copper);
+  --color-line: var(--line);
+  --color-card: var(--card);
+  --color-moss: var(--moss);
+  --color-muted: var(--muted);
+  --font-sans: var(--font-manrope);
+  --font-display: var(--font-unbounded);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-manrope), sans-serif;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-unbounded), sans-serif;
+}
