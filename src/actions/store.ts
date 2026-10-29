@@ -3,18 +3,18 @@
 import { hash } from "bcryptjs";
 import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
-import { z } from "zod";
 import { signIn, signOut } from "@/auth";
 import { db } from "@/db";
-import { cartItems, customers, sellerProfiles, users } from "@/db/schema";
+import { cartItems, customers, users } from "@/db/schema";
 import { claimGuestSession, recordListingEvent } from "@/lib/activity";
+import { type AuthFormState, captchaError, firstFormError, loginSchema, registerSchema } from "@/lib/auth-fields";
 import { verifyCaptcha } from "@/lib/captcha";
 import { assertCartQty, getOrCreateCart } from "@/lib/cart";
 import { DomainError, isNextNavigation } from "@/lib/errors";
 import { readGuestToken } from "@/lib/guest";
 import { runAction } from "@/lib/guards";
 import { saveSellerListing } from "@/lib/listings";
-import { queueConfirmEmail } from "@/lib/mail";
+import { sendConfirmEmail } from "@/lib/mail";
 import { cancelGuestOrder, cancelOrder, placeOrder, transitionLine } from "@/lib/orders";
 import { getCurrentUser } from "@/lib/session";
 
@@ -23,56 +23,46 @@ function safeNext(value: FormDataEntryValue | null) {
   return next.startsWith("/") && !next.startsWith("//") ? next : "/account";
 }
 
-const registerSchema = z.object({
-  name: z.string().trim().min(2, "Укажите имя"),
-  email: z.email("Укажите email"),
-  city: z.string().trim().min(2, "Укажите город"),
-  password: z.string().min(6, "Пароль от 6 символов"),
-});
-
-export async function loginAction(formData: FormData) {
+export async function loginAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const password = String(formData.get("password") || "");
   const next = safeNext(formData.get("next"));
-  const fail = () =>
-    redirect(`/login?error=${encodeURIComponent("Неверный email или пароль")}&next=${encodeURIComponent(next)}`);
+  const parsed = loginSchema.safeParse({ email, password });
+  if (!parsed.success) return firstFormError(parsed.error.issues);
 
   const user = await db.query.users.findFirst({ where: eq(users.email, email) });
-  if (!user) fail();
   const { compare } = await import("bcryptjs");
-  const ok = await compare(password, user!.passwordHash);
-  if (!ok) fail();
-  await claimGuestSession(user!.id, await readGuestToken());
+  const ok = user ? await compare(password, user.passwordHash) : false;
+  if (!user || !ok) return { error: "Неверный email или пароль" };
+  await claimGuestSession(user.id, await readGuestToken());
   try {
     await signIn("credentials", { email, password, redirectTo: next });
   } catch (error) {
     if (isNextNavigation(error)) throw error;
-    fail();
+    return { error: "Неверный email или пароль" };
   }
+  return null;
 }
 
 export async function logoutAction() {
   await signOut({ redirectTo: "/" });
 }
 
-export async function registerAction(formData: FormData) {
+export async function registerAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const parsed = registerSchema.safeParse({
     name: formData.get("name"),
-    email: formData.get("email"),
-    city: formData.get("city"),
+    email: String(formData.get("email") || "").trim(),
     password: formData.get("password"),
   });
-  if (!parsed.success) {
-    redirect(`/register?error=${encodeURIComponent(parsed.error.issues[0]?.message || "Проверьте форму")}`);
-  }
+  if (!parsed.success) return firstFormError(parsed.error.issues);
   const input = parsed.data;
   const captcha = String(formData.get("captcha") || "");
-  if (!captcha.trim() || !(await verifyCaptcha(captcha))) {
-    redirect(`/register?error=${encodeURIComponent("Код с картинки не совпал")}`);
-  }
+  const captchaMessage = captchaError(captcha);
+  if (captchaMessage) return { error: captchaMessage, field: "captcha" };
+  if (!(await verifyCaptcha(captcha))) return { error: "Код с картинки не совпал", field: "captcha" };
   const email = input.email.toLowerCase();
   const existing = await db.query.users.findFirst({ where: eq(users.email, email) });
-  if (existing) redirect("/register?error=" + encodeURIComponent("Такой email уже зарегистрирован"));
+  if (existing) return { error: "Такой email уже зарегистрирован", field: "email" };
 
   const passwordHash = await hash(input.password, 10);
   const [user] = await db
@@ -81,31 +71,51 @@ export async function registerAction(formData: FormData) {
       email,
       passwordHash,
       name: input.name,
-      city: input.city,
       emailVerifyToken: crypto.randomUUID(),
     })
     .returning();
+  let sent = false;
   if (user.emailVerifyToken) {
-    await queueConfirmEmail({
+    const delivery = await sendConfirmEmail({
       id: user.id,
       email: user.email,
       name: user.name,
       emailVerifyToken: user.emailVerifyToken,
     });
+    sent = delivery.sent;
   }
   await db.insert(customers).values({
     userId: user.id,
     name: input.name,
     phone: "",
     email,
-    city: input.city,
     source: "registration",
   });
   await claimGuestSession(user.id, await readGuestToken());
   await signIn("credentials", {
     email,
     password: input.password,
-    redirectTo: "/account",
+    redirectTo: sent ? "/account?sent=1" : "/account",
+  });
+  return null;
+}
+
+export async function resendConfirmEmailAction() {
+  await runAction("/account", async (user) => {
+    if (user.emailVerifiedAt) redirect("/account");
+    let token = user.emailVerifyToken;
+    if (!token) {
+      token = crypto.randomUUID();
+      await db.update(users).set({ emailVerifyToken: token }).where(eq(users.id, user.id));
+    }
+    const delivery = await sendConfirmEmail({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      emailVerifyToken: token,
+    });
+    if (!delivery.sent) throw new DomainError("Не удалось отправить письмо. Его можно открыть в кабинете.");
+    redirect("/account?sent=1");
   });
 }
 
@@ -122,15 +132,6 @@ export async function updateProfileAction(formData: FormData) {
       .set({ name, phone, city })
       .where(eq(customers.userId, user.id));
     redirect("/account?saved=1");
-  });
-}
-
-export async function enablePrivateSellerAction() {
-  await runAction("/account", async (user) => {
-    if (user.staffRole) throw new DomainError("Служебный аккаунт не продаёт как частное лицо");
-    if (user.sellerProfile) throw new DomainError("У аккаунта уже есть роль продавца");
-    await db.insert(sellerProfiles).values({ userId: user.id, type: "individual" });
-    redirect("/account/listings");
   });
 }
 

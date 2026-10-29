@@ -44,7 +44,7 @@ export function CategoryFields({
             <input
               name={`attr_${def.code}`}
               defaultValue={values[def.code] ?? ""}
-              inputMode="decimal"
+              inputMode={def.code === "material" ? "text" : "decimal"}
               className={inputClass}
             />
           </label>

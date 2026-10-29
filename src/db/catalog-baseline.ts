@@ -9,6 +9,15 @@ const boatDefs = [
   { code: "seats", name: "Мест", unit: "", cardOrder: 3 },
   { code: "max_hp", name: "Мощность", unit: "л.с.", cardOrder: 4 },
   { code: "weight_kg", name: "Вес", unit: "кг", cardOrder: 5 },
+  { code: "side_height_mm", name: "Высота борта", unit: "мм", cardOrder: 6 },
+  { code: "material", name: "Материал", unit: "", cardOrder: 7, filterable: false },
+  { code: "deadrise_mid", name: "Килеватость на миделе", unit: "°", cardOrder: 8 },
+  { code: "deadrise_transom", name: "Килеватость на транце", unit: "°", cardOrder: 9 },
+  { code: "transom_height_mm", name: "Высота транца", unit: "мм", cardOrder: 10 },
+  { code: "bottom_mm", name: "Толщина днища", unit: "мм", cardOrder: 11 },
+  { code: "side_thickness_mm", name: "Толщина борта", unit: "мм", cardOrder: 12 },
+  { code: "transom_thickness_mm", name: "Толщина транца", unit: "мм", cardOrder: 13 },
+  { code: "capacity_kg", name: "Грузоподъёмность", unit: "кг", cardOrder: 14 },
 ];
 
 type Node = { slug: string; name: string; sort: number; children?: Node[] };

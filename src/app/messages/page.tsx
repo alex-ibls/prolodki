@@ -12,7 +12,7 @@ export default async function GuestMessagesPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
       <h1 className="text-3xl">Сообщения</h1>
-      <p className="mt-2 text-sm text-muted">Переписка с продавцами в этом браузере. Сессия живёт год.</p>
+      <p className="mt-2 text-sm text-muted">Переписка с продавцами в этом браузере.</p>
       <MessageList rows={rows} hrefBase="/messages" />
     </main>
   );

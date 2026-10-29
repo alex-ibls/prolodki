@@ -1,7 +1,8 @@
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { nomenclature } from "@/db/schema";
+import { nomenclature, nomenclatureImages } from "@/db/schema";
+import { CrumbTitle } from "@/components/breadcrumbs";
 import { NomenclatureForm } from "@/components/nomenclature-form";
 import { formatDate } from "@/lib/format";
 import { stockReasonLabel } from "@/lib/labels";
@@ -22,6 +23,7 @@ export default async function NomenclatureItemPage({
     where: eq(nomenclature.id, id),
     with: {
       attributes: { with: { definition: true } },
+      images: { orderBy: asc(nomenclatureImages.sort) },
       movements: { with: { user: true } },
     },
   });
@@ -29,6 +31,7 @@ export default async function NomenclatureItemPage({
   const movements = [...item.movements].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 20);
   return (
     <main className="grid gap-6">
+      <CrumbTitle label={item.sku} />
       <h1 className="text-3xl">{item.sku}</h1>
       {one("saved") ? <p className="text-sm text-moss">Сохранено.</p> : null}
       <NomenclatureForm item={item} error={one("error")} />

@@ -2,10 +2,12 @@ import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { listings } from "@/db/schema";
+import { CrumbTitle } from "@/components/breadcrumbs";
 import { SavedNote } from "@/components/catalog-ui";
 import { SellerForm } from "@/components/seller-form";
 import { listingStats } from "@/lib/activity";
 import { readQuery } from "@/lib/query";
+import { ensureIndividualSeller } from "@/lib/seller";
 import { getCurrentUser } from "@/lib/session";
 
 export default async function EditListingPage({
@@ -17,8 +19,9 @@ export default async function EditListingPage({
 }) {
   const { id } = await params;
   const { one } = await readQuery(searchParams);
-  const user = await getCurrentUser();
-  if (!user?.sellerProfile) notFound();
+  const current = await getCurrentUser();
+  const user = current ? await ensureIndividualSeller(current) : null;
+  if (!user?.emailVerifiedAt || !user.sellerProfile) notFound();
   const listing = await db.query.listings.findFirst({
     where: eq(listings.id, id),
     with: { attributes: { with: { definition: true } }, images: true },
@@ -27,6 +30,7 @@ export default async function EditListingPage({
   const stat = (await listingStats([listing.id])).get(listing.id);
   return (
     <main className="grid gap-3">
+      <CrumbTitle label={listing.title} />
       <h1 className="text-3xl">Объявление</h1>
       <SavedNote saved={one("saved")} />
       <p className="text-sm text-muted">

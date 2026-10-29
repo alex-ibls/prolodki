@@ -8,6 +8,20 @@ export const conditionLabel = {
   used: "БУ",
 } as const;
 
+export function readOnOrder(raw: string) {
+  const value = raw.trim().toLocaleLowerCase("ru");
+  if (["1", "yes", "true", "order", "на заказ", "заказ"].includes(value)) return true;
+  if (["0", "no", "false", "stock", "в наличии", "наличие"].includes(value)) return false;
+  return null;
+}
+
+export function readRegistered(raw: string) {
+  const value = raw.trim().toLocaleLowerCase("ru");
+  if (["1", "yes", "true", "регистрат"].includes(value)) return true;
+  if (["0", "no", "false", "нерегистрат"].includes(value)) return false;
+  return null;
+}
+
 export const listingStatusLabel = {
   draft: "Черновик",
   pending_review: "На модерации",

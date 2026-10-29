@@ -2,7 +2,7 @@ import Link from "next/link";
 import { toggleFavoriteAction } from "@/actions/activity";
 import { secondaryClass } from "@/components/styles";
 import { favoriteListings } from "@/lib/activity";
-import { formatRub } from "@/lib/format";
+import { formatOffer } from "@/lib/format";
 import { getCurrentUser } from "@/lib/session";
 
 export const metadata = { title: "Избранное" };
@@ -13,9 +13,7 @@ export default async function FavoritesPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
       <h1 className="text-3xl">Избранное</h1>
-      <p className="mt-2 text-sm text-muted">
-        {user ? "Список хранится в аккаунте." : "Список хранится в этом браузере год."}
-      </p>
+      {user ? <p className="mt-2 text-sm text-muted">Список хранится в аккаунте.</p> : null}
       {items.length === 0 ? <p className="mt-6 text-muted">Пока пусто.</p> : null}
       <ul className="mt-4 space-y-3">
         {items.map((item) => (
@@ -24,7 +22,7 @@ export default async function FavoritesPage() {
               <Link href={`/product/${item.slug}`} className="font-display text-lg">
                 {item.title}
               </Link>
-              <p className="text-sm text-muted">{formatRub(item.priceKopeks)}</p>
+              <p className="text-sm text-muted">{formatOffer(item.priceKopeks)}</p>
             </div>
             <form action={toggleFavoriteAction}>
               <input type="hidden" name="listingId" value={item.id} />

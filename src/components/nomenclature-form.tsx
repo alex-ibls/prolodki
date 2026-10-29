@@ -1,6 +1,7 @@
 import { saveNomenclatureAction } from "@/actions/admin";
 import { CategoryFields } from "@/components/category-fields";
 import { LimitedText } from "@/components/limited-text";
+import { PhotoField } from "@/components/photo-field";
 import { buttonClass, inputClass } from "@/components/styles";
 import { allCategories } from "@/lib/catalog";
 import { defsForCategory } from "@/lib/listings";
@@ -14,14 +15,16 @@ type Item = {
   brandId: number | null;
   model: string;
   year: number | null;
+  registered: boolean | null;
+  onOrder: boolean;
   description: string;
   priceKopeks: number;
   compareAtKopeks: number | null;
   quantityOnHand: number;
   quantityReserved: number;
-  city: string;
   isPublished: boolean;
-  attributes?: { valueNumber: number | null; definition?: { code: string } }[];
+  attributes?: { valueNumber: number | null; valueText?: string | null; definition?: { code: string } }[];
+  images?: { id: string; path: string }[];
 };
 
 export async function NomenclatureForm({ item, error }: { item?: Item; error?: string }) {
@@ -40,7 +43,9 @@ export async function NomenclatureForm({ item, error }: { item?: Item; error?: s
   }
   const values: Record<string, string> = {};
   for (const attr of item?.attributes ?? []) {
-    if (attr.definition && attr.valueNumber !== null) values[attr.definition.code] = String(attr.valueNumber);
+    if (!attr.definition) continue;
+    if (attr.definition.code === "material" && attr.valueText) values[attr.definition.code] = attr.valueText;
+    else if (attr.valueNumber !== null) values[attr.definition.code] = String(attr.valueNumber);
   }
   return (
     <form action={saveNomenclatureAction} className="grid gap-3 rounded-3xl border border-line bg-card p-5">
@@ -75,8 +80,19 @@ export async function NomenclatureForm({ item, error }: { item?: Item; error?: s
           <input name="year" defaultValue={item?.year ?? ""} className={inputClass} />
         </label>
         <label className="text-sm">
-          Город
-          <input name="city" defaultValue={item?.city ?? "Химки"} className={inputClass} />
+          Регистрация
+          <select name="registered" required defaultValue={item?.registered == null ? "" : item.registered ? "yes" : "no"} className={inputClass}>
+            <option value="">Выберите</option>
+            <option value="yes">Регистрат</option>
+            <option value="no">Нерегистрат</option>
+          </select>
+        </label>
+        <label className="text-sm">
+          Наличие
+          <select name="onOrder" required defaultValue={item?.onOrder ? "order" : "stock"} className={inputClass}>
+            <option value="stock">В наличии</option>
+            <option value="order">На заказ</option>
+          </select>
         </label>
         <label className="text-sm">
           Цена, ₽
@@ -106,6 +122,15 @@ export async function NomenclatureForm({ item, error }: { item?: Item; error?: s
         Описание
         <LimitedText name="description" defaultValue={item?.description} />
       </div>
+      {item?.images && item.images.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {item.images.map((image) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={image.id} src={`/media/${image.path}`} alt="" className="h-20 w-20 rounded-xl object-cover" />
+          ))}
+        </div>
+      ) : null}
+      <PhotoField existing={item?.images?.length ?? 0} />
       <label className="flex items-center gap-2 text-sm">
         <input name="publish" type="checkbox" defaultChecked={item?.isPublished ?? true} />
         Опубликовать на витрине

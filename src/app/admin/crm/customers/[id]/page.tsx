@@ -2,6 +2,7 @@ import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { createDealAction, updateCustomerAction } from "@/actions/admin";
+import { CrumbTitle } from "@/components/breadcrumbs";
 import { buttonClass, inputClass, secondaryClass } from "@/components/styles";
 import { db } from "@/db";
 import { customers } from "@/db/schema";
@@ -27,6 +28,7 @@ export default async function CustomerPage({
   if (!customer) notFound();
   return (
     <main className="grid gap-6">
+      <CrumbTitle label={customer.name} />
       <h1 className="text-3xl">{customer.name}</h1>
       {one("error") ? <p className="text-sm text-red-700">{one("error")}</p> : null}
       {one("saved") ? <p className="text-sm text-moss">Сохранено.</p> : null}

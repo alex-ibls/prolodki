@@ -1,9 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [{ source: "/catalog", destination: "/", permanent: true }];
+  },
+  serverExternalPackages: ["nodemailer", "sharp"],
   experimental: {
     serverActions: {
-      bodySizeLimit: "8mb",
+      bodySizeLimit: "220mb",
     },
   },
   turbopack: {

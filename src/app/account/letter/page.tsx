@@ -1,8 +1,5 @@
-import { and, desc, eq } from "drizzle-orm";
-import { db } from "@/db";
-import { outboundEmails } from "@/db/schema";
 import { confirmEmailLetter } from "@/emails/confirm-email";
-import { appOrigin } from "@/lib/mail";
+import { appOrigin, latestConfirmEmail } from "@/lib/mail";
 import { getCurrentUser } from "@/lib/session";
 
 export const metadata = { title: "Письмо" };
@@ -19,17 +16,14 @@ export default async function LetterPage() {
     );
   }
 
-  const stored = await db.query.outboundEmails.findFirst({
-    where: and(eq(outboundEmails.userId, user.id), eq(outboundEmails.kind, "confirm_email")),
-    orderBy: desc(outboundEmails.createdAt),
-  });
+  const stored = await latestConfirmEmail(user.id);
   const fresh = user.emailVerifyToken
     ? confirmEmailLetter({
         name: user.name,
         confirmUrl: `${appOrigin()}/verify-email?token=${user.emailVerifyToken}`,
       })
     : null;
-  const letter = stored ?? (fresh ? { subject: fresh.subject, bodyHtml: fresh.html } : null);
+  const letter = stored ?? (fresh ? { subject: fresh.subject, bodyHtml: fresh.html, sentAt: null } : null);
 
   if (!letter) {
     return (
@@ -44,7 +38,9 @@ export default async function LetterPage() {
     <main>
       <h1 className="text-3xl">Письмо</h1>
       <p className="mt-2 text-sm text-muted">
-        Почтовый сервер не подключён, поэтому письмо открывается здесь. Тема: {letter.subject}
+        {letter.sentAt
+          ? `Письмо отправлено на ${user.email}. Тема: ${letter.subject}`
+          : `Письмо для ${user.email} можно подтвердить здесь, если оно не пришло на почту. Тема: ${letter.subject}`}
       </p>
       <iframe title={letter.subject} srcDoc={letter.bodyHtml} className="mt-4 h-[640px] w-full rounded-3xl border border-line bg-white" />
     </main>

@@ -1,7 +1,8 @@
+import { redirect } from "next/navigation";
 import { SellerForm } from "@/components/seller-form";
 import { readQuery } from "@/lib/query";
+import { ensureIndividualSeller } from "@/lib/seller";
 import { getCurrentUser } from "@/lib/session";
-import { redirect } from "next/navigation";
 
 export const metadata = { title: "Новое объявление" };
 
@@ -10,8 +11,9 @@ export default async function NewListingPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const user = await getCurrentUser();
-  if (!user?.sellerProfile) redirect("/account");
+  const current = await getCurrentUser();
+  const user = current ? await ensureIndividualSeller(current) : null;
+  if (!user?.emailVerifiedAt || !user.sellerProfile) redirect("/account");
   const { one } = await readQuery(searchParams);
   return (
     <main>

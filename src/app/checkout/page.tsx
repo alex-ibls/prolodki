@@ -26,7 +26,7 @@ export default async function CheckoutPage({
       </p>
       {user ? null : (
         <p className="mt-2 text-sm">
-          Регистрация не нужна: заказ останется в этом браузере на год.{" "}
+          Регистрация не нужна.{" "}
           <Link href="/login?next=/checkout" className="font-semibold">
             Войти
           </Link>

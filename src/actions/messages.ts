@@ -12,7 +12,7 @@ function safePath(value: string, fallback: string) {
 export async function sendListingMessageAction(formData: FormData) {
   const slug = String(formData.get("slug") || "");
   const listingId = String(formData.get("listingId") || "");
-  const back = slug ? `/product/${slug}` : "/catalog";
+  const back = slug ? `/product/${slug}` : "/";
   try {
     const threadId = await sendListingMessage(
       listingId,

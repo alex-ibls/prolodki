@@ -21,6 +21,19 @@ export function isLeaf(all: CategoryNode[], id: number) {
   return !all.some((item) => item.parentId === id);
 }
 
+export function categoryChain(all: CategoryNode[], slug: string | undefined) {
+  if (!slug) return [];
+  const chain: CategoryNode[] = [];
+  let current = all.find((item) => item.slug === slug);
+  const guard = new Set<number>();
+  while (current && !guard.has(current.id)) {
+    guard.add(current.id);
+    chain.unshift(current);
+    current = current.parentId ? all.find((item) => item.id === current?.parentId) : undefined;
+  }
+  return chain;
+}
+
 export function categoryPath(all: CategoryNode[], id: number) {
   const names: string[] = [];
   let current = all.find((item) => item.id === id);

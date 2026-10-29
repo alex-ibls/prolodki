@@ -60,7 +60,9 @@ export async function syncPublishedListing(executor: Executor, nomenclatureId: s
     condition: "new" as const,
     priceKopeks: item.priceKopeks,
     compareAtKopeks: item.compareAtKopeks,
-    city: item.city,
+    city: "",
+    registered: item.registered,
+    onOrder: item.onOrder,
     quantity: available,
     status: "published" as const,
     rejectionReason: "",
@@ -82,11 +84,12 @@ export async function syncPublishedListing(executor: Executor, nomenclatureId: s
   if (item.attributes.length > 0) {
     await executor.insert(listingAttributes).values(
       item.attributes
-        .filter((attr) => attr.valueNumber !== null)
+        .filter((attr) => attr.valueNumber !== null || Boolean(attr.valueText?.trim()))
         .map((attr) => ({
           listingId: listingId!,
           attributeDefId: attr.attributeDefId,
           valueNumber: attr.valueNumber,
+          valueText: attr.valueText,
         })),
     );
   }
@@ -109,7 +112,7 @@ export async function writeStockMovement(
 export async function replaceNomenclatureAttributes(
   executor: Executor,
   nomenclatureId: string,
-  values: { attributeDefId: number; valueNumber: number }[],
+  values: { attributeDefId: number; valueNumber: number | null; valueText?: string | null }[],
 ) {
   await executor
     .delete(nomenclatureAttributes)

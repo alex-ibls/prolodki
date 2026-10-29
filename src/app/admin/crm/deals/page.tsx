@@ -36,7 +36,7 @@ export default async function DealsPage({
             </option>
           ))}
         </select>
-        <button className="rounded-full bg-navy px-4 text-sm text-white">Фильтр</button>
+        <button className="btn bg-navy px-4 text-sm text-white">Фильтр</button>
       </form>
       <ul className="mt-4 space-y-2">
         {rows.map((deal) => (

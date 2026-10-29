@@ -15,15 +15,15 @@ async function AdminFrame({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
   if (!user?.staffRole) redirect("/login?next=/admin/crm");
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8">
-      <nav className="mb-6 flex flex-wrap gap-3 text-sm">
-        {user.staffRole === "manager" ? <Link href="/admin/crm">Клиенты</Link> : null}
-        {user.staffRole === "manager" ? <Link href="/admin/crm/deals">Сделки</Link> : null}
-        {user.staffRole === "manager" ? <Link href="/admin/catalog">Каталог</Link> : null}
-        {user.staffRole === "manager" ? <Link href="/admin/brands">Бренды</Link> : null}
-        {user.staffRole === "manager" ? <Link href="/admin/nomenclature">Номенклатура</Link> : null}
-        {user.staffRole === "manager" ? <Link href="/admin/orders">Заказы 1P</Link> : null}
-        <Link href="/admin/moderation">Модерация</Link>
+    <div className="mx-auto max-w-5xl px-4 py-4 sm:py-8">
+      <nav className="-mx-4 mb-6 flex gap-4 overflow-x-auto px-4 text-sm sm:mx-0 sm:flex-wrap sm:px-0">
+        {user.staffRole === "manager" ? <Link href="/admin/crm" className="shrink-0">Клиенты</Link> : null}
+        {user.staffRole === "manager" ? <Link href="/admin/crm/deals" className="shrink-0">Сделки</Link> : null}
+        {user.staffRole === "manager" ? <Link href="/admin/catalog" className="shrink-0">Каталог</Link> : null}
+        {user.staffRole === "manager" ? <Link href="/admin/brands" className="shrink-0">Бренды</Link> : null}
+        {user.staffRole === "manager" ? <Link href="/admin/nomenclature" className="shrink-0">Номенклатура</Link> : null}
+        {user.staffRole === "manager" ? <Link href="/admin/orders" className="shrink-0">Заказы 1P</Link> : null}
+        <Link href="/admin/moderation" className="shrink-0">Модерация</Link>
       </nav>
       {children}
     </div>

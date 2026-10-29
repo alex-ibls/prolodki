@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { readQuery } from "@/lib/query";
+import { grantIndividualSeller } from "@/lib/seller";
 
 export const metadata = { title: "Подтверждение email" };
 
@@ -21,5 +22,6 @@ export default async function VerifyEmailPage({
     .update(users)
     .set({ emailVerifiedAt: new Date(), emailVerifyToken: null })
     .where(eq(users.id, user.id));
+  await grantIndividualSeller(user.id);
   redirect("/account?verified=1");
 }

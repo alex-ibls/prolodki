@@ -1,6 +1,7 @@
 import { saveListingAction } from "@/actions/store";
 import { CategoryFields } from "@/components/category-fields";
 import { LimitedText } from "@/components/limited-text";
+import { PhotoField } from "@/components/photo-field";
 import { buttonClass, inputClass, secondaryClass } from "@/components/styles";
 import { allCategories } from "@/lib/catalog";
 import { defsForCategory } from "@/lib/listings";
@@ -17,9 +18,12 @@ type ListingShape = {
   priceKopeks: number;
   compareAtKopeks: number | null;
   city: string;
+  registered: boolean | null;
+  onOrder: boolean;
   quantity: number;
   status: string;
-  attributes?: { attributeDefId: number; valueNumber: number | null; definition?: { code: string } }[];
+  images?: { id: string }[];
+  attributes?: { attributeDefId: number; valueNumber: number | null; valueText?: string | null; definition?: { code: string } }[];
 };
 
 export async function SellerForm({
@@ -41,7 +45,9 @@ export async function SellerForm({
   }
   const values: Record<string, string> = {};
   for (const attr of listing?.attributes ?? []) {
-    if (attr.definition && attr.valueNumber !== null) values[attr.definition.code] = String(attr.valueNumber);
+    if (!attr.definition) continue;
+    if (attr.definition.code === "material" && attr.valueText) values[attr.definition.code] = attr.valueText;
+    else if (attr.valueNumber !== null) values[attr.definition.code] = String(attr.valueNumber);
   }
   const locked = listing?.status === "reserved" || listing?.status === "archived";
   return (
@@ -87,6 +93,21 @@ export async function SellerForm({
           <input name="city" defaultValue={listing?.city} className={inputClass} />
         </label>
         <label className="text-sm">
+          Регистрация
+          <select name="registered" required defaultValue={listing?.registered == null ? "" : listing.registered ? "yes" : "no"} className={inputClass} disabled={locked}>
+            <option value="">Выберите</option>
+            <option value="yes">Регистрат</option>
+            <option value="no">Нерегистрат</option>
+          </select>
+        </label>
+        <label className="text-sm">
+          Наличие
+          <select name="onOrder" required defaultValue={listing?.onOrder ? "order" : "stock"} className={inputClass} disabled={locked}>
+            <option value="stock">В наличии</option>
+            <option value="order">На заказ</option>
+          </select>
+        </label>
+        <label className="text-sm">
           Цена, ₽
           <input name="price" required defaultValue={listing ? listing.priceKopeks / 100 : ""} className={inputClass} />
         </label>
@@ -96,10 +117,7 @@ export async function SellerForm({
         Описание
         <LimitedText name="description" defaultValue={listing?.description} />
       </div>
-      <label className="text-sm">
-        Фото
-        <input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple className={inputClass} />
-      </label>
+      <PhotoField existing={listing?.images?.length ?? 0} disabled={locked} />
       {locked ? null : (
         <div className="flex gap-2">
           <button name="intent" value="draft" className={secondaryClass}>

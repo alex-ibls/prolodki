@@ -4,8 +4,8 @@ import { useActionState } from "react";
 import { importCsvAction, type ImportState } from "@/actions/admin";
 import { buttonClass, inputClass, secondaryClass } from "@/components/styles";
 
-const fullSample = `sku,title,category_slug,brand,model,year,price,compare_at_price,quantity,city,description
-SV-391,Лодка Север 391,alum-tiller,Риверботс,391,2026,210000,,2,Химки,Короткое описание`;
+const fullSample = `sku,title,category_slug,brand,model,year,price,compare_at_price,quantity,registered,availability,description
+SV-391,Лодка Север 391,alum-tiller,Риверботс,391,2026,210000,,2,регистрат,в наличии,Короткое описание`;
 
 const correctionSample = `sku,price,quantity
 SV-390,205000,3`;

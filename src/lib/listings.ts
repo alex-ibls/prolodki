@@ -9,10 +9,12 @@ import {
 import { readListingDescription } from "@/lib/description";
 import { DomainError } from "@/lib/errors";
 import { parseIntStrict, parseNumber, parsePriceToKopeks } from "@/lib/format";
+import { readOnOrder, readRegistered } from "@/lib/labels";
+import { ensureIndividualSeller } from "@/lib/seller";
 import type { CurrentUser } from "@/lib/session";
 import { slugify } from "@/lib/slug";
 import { assertLeafCategory, resolveBrandId } from "@/lib/taxonomy";
-import { saveListingImage } from "@/lib/uploads";
+import { assertPhotoRoom, photoFiles, saveListingImage } from "@/lib/uploads";
 
 export async function defsForCategory(categoryId: number) {
   return db
@@ -26,24 +28,30 @@ export function readAttributeValues(
   formData: FormData,
   defs: { id: number; code: string; name: string }[],
 ) {
-  const values: { attributeDefId: number; valueNumber: number }[] = [];
+  const values: { attributeDefId: number; valueNumber: number | null; valueText: string | null }[] = [];
   for (const def of defs) {
     const raw = String(formData.get(`attr_${def.code}`) ?? "").trim();
     if (!raw) continue;
+    if (def.code === "material") {
+      if (raw.length > 80) throw new DomainError("Материал — не больше 80 символов");
+      values.push({ attributeDefId: def.id, valueNumber: null, valueText: raw });
+      continue;
+    }
     const value = parseNumber(raw);
     if (value === null) throw new DomainError(`«${def.name}» должно быть числом`);
-    values.push({ attributeDefId: def.id, valueNumber: value });
+    values.push({ attributeDefId: def.id, valueNumber: value, valueText: null });
   }
   return values;
 }
 
 export async function saveSellerListing(user: CurrentUser, listingId: string | null, formData: FormData) {
-  const profile = user.sellerProfile;
-  if (!profile) throw new DomainError("Сначала включите продажи в личном кабинете");
-  const intent = String(formData.get("intent") || "draft");
-  if (intent === "submit" && !user.emailVerifiedAt) {
-    throw new DomainError("Подтвердите email, чтобы разместить объявление");
+  if (!user.emailVerifiedAt) {
+    throw new DomainError("Подтвердите email в профиле, чтобы продавать");
   }
+  user = await ensureIndividualSeller(user);
+  const profile = user.sellerProfile;
+  if (!profile) throw new DomainError("Подтвердите email в профиле, чтобы продавать");
+  const intent = String(formData.get("intent") || "draft");
   const categoryId = Number(formData.get("categoryId"));
   if (!categoryId) throw new DomainError("Выберите категорию");
   await assertLeafCategory(categoryId);
@@ -60,6 +68,10 @@ export async function saveSellerListing(user: CurrentUser, listingId: string | n
   if (yearRaw && (year === null || year < 1950 || year > 2100)) {
     throw new DomainError("Год указан неверно");
   }
+  const registered = readRegistered(String(formData.get("registered") || ""));
+  if (registered === null) throw new DomainError("Укажите, регистрат или нерегистрат");
+  const onOrder = readOnOrder(String(formData.get("onOrder") || ""));
+  if (onOrder === null) throw new DomainError("Укажите, в наличии или на заказ");
   const defs = await defsForCategory(categoryId);
   const attributes = readAttributeValues(formData, defs);
   if (profile.type !== "individual") throw new DomainError("Публиковать может только частный продавец");
@@ -77,10 +89,9 @@ export async function saveSellerListing(user: CurrentUser, listingId: string | n
     throw new DomainError("Это объявление уже нельзя редактировать");
   }
 
-  const files = formData
-    .getAll("photos")
-    .filter((file): file is File => file instanceof File && file.size > 0);
+  const files = photoFiles(formData);
   const photoCount = (existing?.images.length ?? 0) + files.length;
+  assertPhotoRoom(existing?.images.length ?? 0, files.length);
   const shouldReview = intent === "submit" || existing?.status === "published";
   if (shouldReview && !user.emailVerifiedAt) {
     throw new DomainError("Подтвердите email, чтобы разместить объявление");
@@ -102,6 +113,8 @@ export async function saveSellerListing(user: CurrentUser, listingId: string | n
     priceKopeks: price,
     compareAtKopeks: compareAt,
     city: String(formData.get("city") || user.city || "").trim(),
+    registered,
+    onOrder,
     quantity: 1,
     status,
     rejectionReason: "",

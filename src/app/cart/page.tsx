@@ -17,29 +17,29 @@ export default async function CartPage({
   const { items } = await getCartView();
   const total = items.reduce((sum, item) => sum + item.listing.priceKopeks * item.qty, 0);
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
-      <h1 className="text-3xl">Корзина</h1>
+    <main className="mx-auto max-w-3xl px-4 py-4 sm:py-8">
+      <h1 className="text-2xl sm:text-3xl">Корзина</h1>
       <ErrorNote message={one("error")} />
       {items.length === 0 ? (
         <p className="mt-6 text-muted">
-          Пока пусто. <Link href="/catalog">Открыть каталог</Link>
+          Пока пусто. <Link href="/">На главную</Link>
         </p>
       ) : (
         <ul className="mt-6 space-y-4">
           {items.map((item) => (
             <li key={item.listingId} className="rounded-3xl border border-line bg-card p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <Link href={`/product/${item.listing.slug}`} className="font-display text-lg">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <Link href={`/product/${item.listing.slug}`} className="font-display text-base leading-snug sm:text-lg">
                     {item.listing.title}
                   </Link>
                   <p className="text-sm text-muted">
                     {formatRub(item.listing.priceKopeks)} · доступно {item.listing.quantity}
                   </p>
                 </div>
-                <p className="font-semibold">{formatRub(item.listing.priceKopeks * item.qty)}</p>
+                <p className="shrink-0 font-semibold">{formatRub(item.listing.priceKopeks * item.qty)}</p>
               </div>
-              <div className="mt-3 flex gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
                 <form action={updateCartAction} className="flex gap-2">
                   <input type="hidden" name="listingId" value={item.listingId} />
                   <input
@@ -48,7 +48,7 @@ export default async function CartPage({
                     min={1}
                     max={Math.max(item.listing.quantity, 1)}
                     defaultValue={item.qty}
-                    className="w-20 rounded-xl border border-line px-3 py-2"
+                    className="field w-20 border border-line px-3 py-2"
                   />
                   <button className={secondaryClass}>Обновить</button>
                 </form>

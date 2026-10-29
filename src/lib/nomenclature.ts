@@ -5,6 +5,7 @@ import { csvRecords } from "@/lib/csv";
 import { readListingDescription } from "@/lib/description";
 import { DomainError } from "@/lib/errors";
 import { parseIntStrict, parsePriceToKopeks } from "@/lib/format";
+import { readOnOrder, readRegistered } from "@/lib/labels";
 import { availableOf, replaceNomenclatureAttributes, syncPublishedListing, writeStockMovement } from "@/lib/stock";
 import { assertLeafCategory, resolveBrandName } from "@/lib/taxonomy";
 
@@ -108,12 +109,18 @@ async function applyFull(userId: string, record: Record<string, string>) {
     priceKopeks: price,
     compareAtKopeks: compareAt,
     quantityOnHand: quantity,
-    city: record.city?.trim() || "Химки",
+    city: "",
     updatedAt: new Date(),
   };
+  const registeredRaw = record.registered?.trim() ?? "";
+  const registered = registeredRaw ? readRegistered(registeredRaw) : null;
+  if (registeredRaw && registered === null) throw new DomainError("Регистрация указана неверно: регистрат или нерегистрат");
+  const onOrderRaw = record.on_order?.trim() || record.availability?.trim() || "";
+  const onOrder = onOrderRaw ? readOnOrder(onOrderRaw) : null;
+  if (onOrderRaw && onOrder === null) throw new DomainError("Наличие указано неверно: в наличии или на заказ");
 
   if (!existing) {
-    const [created] = await db.insert(nomenclature).values(values).returning();
+    const [created] = await db.insert(nomenclature).values({ ...values, registered, onOrder: onOrder ?? false }).returning();
     await db.insert(stockMovements).values({
       nomenclatureId: created.id,
       delta: quantity,
@@ -125,7 +132,14 @@ async function applyFull(userId: string, record: Record<string, string>) {
   }
 
   const delta = quantity - existing.quantityOnHand;
-  await db.update(nomenclature).set(values).where(eq(nomenclature.id, existing.id));
+  await db
+    .update(nomenclature)
+    .set({
+      ...values,
+      ...(registered === null ? {} : { registered }),
+      ...(onOrder === null ? {} : { onOrder }),
+    })
+    .where(eq(nomenclature.id, existing.id));
   if (delta !== 0) {
     await writeStockMovement(db, {
       nomenclatureId: existing.id,
@@ -153,9 +167,10 @@ export async function saveNomenclatureItem(
     priceKopeks: number;
     compareAtKopeks: number | null;
     quantityOnHand: number;
-    city: string;
+    registered: boolean;
+    onOrder: boolean;
     publish: boolean;
-    attributes: { attributeDefId: number; valueNumber: number }[];
+    attributes: { attributeDefId: number; valueNumber: number | null; valueText?: string | null }[];
   },
 ) {
   const sku = input.sku.trim().toUpperCase();
@@ -182,7 +197,9 @@ export async function saveNomenclatureItem(
         priceKopeks: input.priceKopeks,
         compareAtKopeks: input.compareAtKopeks,
         quantityOnHand: input.quantityOnHand,
-        city: input.city,
+        city: "",
+        registered: input.registered,
+        onOrder: input.onOrder,
         isPublished: input.publish,
       })
       .returning();
@@ -218,7 +235,9 @@ export async function saveNomenclatureItem(
       priceKopeks: input.priceKopeks,
       compareAtKopeks: input.compareAtKopeks,
       quantityOnHand: input.quantityOnHand,
-      city: input.city,
+      city: "",
+      registered: input.registered,
+      onOrder: input.onOrder,
       isPublished: input.publish,
       updatedAt: new Date(),
     })

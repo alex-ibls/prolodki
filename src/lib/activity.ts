@@ -1,6 +1,16 @@
-import { and, desc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { favorites, listingEvents, listingMessages, listingThreads, listings, orders, users } from "@/db/schema";
+import {
+  favorites,
+  listingEvents,
+  listingImages,
+  listingMessages,
+  listingThreads,
+  listings,
+  orders,
+  users,
+  viewHistory,
+} from "@/db/schema";
 import { isListingSeller } from "@/lib/messages";
 import { mergeGuestCart } from "@/lib/cart";
 import { ensureGuestToken, readGuestToken } from "@/lib/guest";
@@ -55,14 +65,66 @@ export async function recordListingEvent(input: {
   return true;
 }
 
+async function touchViewHistory(who: { userId: string | null; guestToken: string | null }, listingId: string) {
+  const where = who.userId
+    ? and(eq(viewHistory.listingId, listingId), eq(viewHistory.userId, who.userId))
+    : and(eq(viewHistory.listingId, listingId), eq(viewHistory.guestToken, who.guestToken ?? ""));
+  const existing = await db.query.viewHistory.findFirst({ where });
+  const viewedAt = new Date();
+  if (existing) {
+    await db.update(viewHistory).set({ viewedAt }).where(eq(viewHistory.id, existing.id));
+    return;
+  }
+  await db.insert(viewHistory).values({
+    listingId,
+    userId: who.userId,
+    guestToken: who.guestToken,
+    viewedAt,
+  });
+}
+
 export async function recordView(listingId: string) {
   const listing = await db.query.listings.findFirst({
     where: and(eq(listings.id, listingId), eq(listings.status, "published")),
-    columns: { id: true },
+    columns: { id: true, sellerUserId: true, organizationId: true },
   });
   if (!listing) return;
   const who = await actor();
+  const user = await getCurrentUser();
+  if (!isListingSeller(user ?? null, listing)) await touchViewHistory(who, listingId);
   await recordListingEvent({ listingId, kind: "view", ...who });
+}
+
+export async function viewedListings() {
+  const user = await getCurrentUser();
+  const token = user ? null : await readGuestToken();
+  if (!user && !token) return [];
+  const rows = await db
+    .select({ listingId: viewHistory.listingId })
+    .from(viewHistory)
+    .where(user ? eq(viewHistory.userId, user.id) : eq(viewHistory.guestToken, token!))
+    .orderBy(desc(viewHistory.viewedAt))
+    .limit(48);
+  if (rows.length === 0) return [];
+  const items = await db.query.listings.findMany({
+    where: and(
+      inArray(
+        listings.id,
+        rows.map((row) => row.listingId),
+      ),
+      eq(listings.status, "published"),
+    ),
+    with: {
+      images: { orderBy: asc(listingImages.sort) },
+      attributes: { with: { definition: true } },
+      category: true,
+    },
+  });
+  const byId = new Map(items.map((item) => [item.id, item]));
+  return rows.flatMap((row) => {
+    const listing = byId.get(row.listingId);
+    return listing ? [listing] : [];
+  });
 }
 
 export async function listingStats(ids: string[]) {
@@ -204,6 +266,25 @@ export async function claimGuestSession(userId: string, guestToken: string | nul
     .update(listingEvents)
     .set({ userId })
     .where(and(eq(listingEvents.guestToken, guestToken), isNull(listingEvents.userId)));
+  const seen = await db.select().from(viewHistory).where(eq(viewHistory.guestToken, guestToken));
+  for (const row of seen) {
+    const [own] = await db
+      .select()
+      .from(viewHistory)
+      .where(and(eq(viewHistory.listingId, row.listingId), eq(viewHistory.userId, userId)))
+      .limit(1);
+    if (own) {
+      if (row.viewedAt > own.viewedAt) {
+        await db.update(viewHistory).set({ viewedAt: row.viewedAt }).where(eq(viewHistory.id, own.id));
+      }
+      await db.delete(viewHistory).where(eq(viewHistory.id, row.id));
+    } else {
+      await db
+        .update(viewHistory)
+        .set({ userId, guestToken: null })
+        .where(eq(viewHistory.id, row.id));
+    }
+  }
   const account = await db.query.users.findFirst({
     where: eq(users.id, userId),
     columns: { id: true, staffRole: true },

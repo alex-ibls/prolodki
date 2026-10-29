@@ -3,7 +3,7 @@ import { asc } from "drizzle-orm";
 import { db } from "@/db";
 import { nomenclature } from "@/db/schema";
 import { buttonClass, secondaryClass } from "@/components/styles";
-import { formatRub } from "@/lib/format";
+import { formatOffer } from "@/lib/format";
 import { requireManager } from "@/lib/guards";
 import { availableOf } from "@/lib/stock";
 
@@ -48,7 +48,7 @@ export default async function NomenclaturePage() {
                   <Link href={`/admin/nomenclature/${row.id}`}>{row.sku}</Link>
                 </td>
                 <td className="px-4 py-3">{row.title}</td>
-                <td className="px-4 py-3">{formatRub(row.priceKopeks)}</td>
+                <td className="px-4 py-3">{formatOffer(row.priceKopeks)}</td>
                 <td className="px-4 py-3">{row.quantityOnHand}</td>
                 <td className="px-4 py-3">{row.quantityReserved}</td>
                 <td className="px-4 py-3">{availableOf(row)}</td>

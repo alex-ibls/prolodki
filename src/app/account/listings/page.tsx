@@ -6,18 +6,20 @@ import { buttonClass } from "@/components/styles";
 import { listingStats } from "@/lib/activity";
 import { formatRub } from "@/lib/format";
 import { listingStatusLabel } from "@/lib/labels";
+import { ensureIndividualSeller } from "@/lib/seller";
 import { getCurrentUser } from "@/lib/session";
 
 export const metadata = { title: "Объявления" };
 
 export default async function ListingsPage() {
-  const user = await getCurrentUser();
-  if (!user) return null;
-  if (!user.sellerProfile) {
+  const current = await getCurrentUser();
+  if (!current) return null;
+  const user = await ensureIndividualSeller(current);
+  if (!user.emailVerifiedAt || !user.sellerProfile) {
     return (
       <main>
         <h1 className="text-3xl">Объявления</h1>
-        <p className="mt-3 text-muted">Чтобы продавать БУ, включите режим частного продавца в профиле.</p>
+        <p className="mt-3 text-muted">Чтобы продавать, подтвердите email в профиле.</p>
         <Link href="/account" className={`${buttonClass} mt-4`}>
           К профилю
         </Link>

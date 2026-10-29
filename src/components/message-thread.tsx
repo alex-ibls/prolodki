@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { replyMessageAction } from "@/actions/messages";
+import { CrumbTitle } from "@/components/breadcrumbs";
 import { ErrorNote } from "@/components/catalog-ui";
 import { buttonClass, inputClass } from "@/components/styles";
 import { formatDate } from "@/lib/format";
@@ -27,6 +28,7 @@ export function MessageThread({
 }) {
   return (
     <article className="grid gap-4">
+      <CrumbTitle label={thread.listing?.title ?? "Переписка"} />
       <div>
         <h1 className="text-3xl">Сообщение</h1>
         {thread.listing ? (

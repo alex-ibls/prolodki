@@ -94,6 +94,7 @@ export async function assertCartQty(listingId: string, qty: number) {
   if (!Number.isInteger(qty) || qty < 1) throw new DomainError("Укажите количество");
   const listing = await db.query.listings.findFirst({ where: eq(listings.id, listingId) });
   if (!listing || listing.status !== "published") throw new DomainError("Товар недоступен");
+  if (listing.priceKopeks <= 0) throw new DomainError("Цена по запросу, в корзину не добавляется");
   if (listing.quantity < 1) throw new DomainError("Нет в наличии");
   if (qty > listing.quantity) throw new DomainError(`Доступно ${listing.quantity}`);
   return listing;

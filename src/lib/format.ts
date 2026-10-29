@@ -6,6 +6,11 @@ export function formatRub(kopeks: number) {
   }).format(kopeks / 100);
 }
 
+export function formatOffer(kopeks: number) {
+  if (kopeks <= 0) return "Цена по запросу";
+  return formatRub(kopeks);
+}
+
 export function formatDate(value: Date) {
   return new Intl.DateTimeFormat("ru-RU", {
     dateStyle: "medium",

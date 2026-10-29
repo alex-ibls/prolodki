@@ -1,4 +1,5 @@
 import { cancelOrderAction, transitionLineAction } from "@/actions/store";
+import { CrumbTitle } from "@/components/breadcrumbs";
 import { secondaryClass } from "@/components/styles";
 import { formatRub, orderCode } from "@/lib/format";
 import { fulfillmentLabel, lineStatusLabel, orderStatusLabel, paymentLabel } from "@/lib/labels";
@@ -44,6 +45,7 @@ export function OrderView({
   const status = deriveOrderStatus(lines);
   return (
     <article className="rounded-3xl border border-line bg-card p-5">
+      <CrumbTitle label={`Заказ ${orderCode(order.orderNo)}`} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl">Заказ {orderCode(order.orderNo)}</h1>

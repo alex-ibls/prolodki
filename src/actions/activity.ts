@@ -7,6 +7,7 @@ import { formatPhone } from "@/lib/format";
 
 export async function recordViewAction(listingId: string, slug: string) {
   await recordView(listingId);
+  revalidatePath("/history");
   if (slug && !slug.includes("/") && !slug.includes(".")) revalidatePath(`/product/${slug}`);
 }
 

@@ -29,7 +29,7 @@ export default async function ModerationPage({
           <li key={row.id} className="rounded-3xl border border-line bg-card p-4">
             <p className="font-display text-lg">{row.title}</p>
             <p className="text-sm text-muted">
-              {sourceLabel[row.source]} · {row.category?.name} · {formatRub(row.priceKopeks)} · {row.city}
+              {[sourceLabel[row.source], row.category?.name, formatRub(row.priceKopeks), row.city].filter(Boolean).join(" · ")}
             </p>
             <p className="mt-2 text-sm">{row.description}</p>
             {row.images[0] ? (

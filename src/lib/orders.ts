@@ -92,6 +92,7 @@ export async function placeOrder(
       const available = listing.nomenclatureId
         ? availableOf(nomById.get(listing.nomenclatureId)!)
         : listing.quantity;
+      if (listing.priceKopeks <= 0) throw new DomainError(`«${listing.title}»: цена по запросу`);
       if (item.qty > available) {
         throw new DomainError(`«${listing.title}»: доступно ${Math.max(available, 0)}`);
       }

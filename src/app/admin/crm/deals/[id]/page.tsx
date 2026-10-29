@@ -2,6 +2,7 @@ import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { addDealNoteAction, updateDealAction } from "@/actions/admin";
+import { CrumbTitle } from "@/components/breadcrumbs";
 import { buttonClass, inputClass } from "@/components/styles";
 import { db } from "@/db";
 import { deals, users } from "@/db/schema";
@@ -28,6 +29,7 @@ export default async function DealPage({
   const managers = await db.select().from(users).where(eq(users.staffRole, "manager"));
   return (
     <main className="grid gap-6">
+      <CrumbTitle label={deal.title} />
       <h1 className="text-3xl">{deal.title}</h1>
       <p className="text-sm text-muted">
         Клиент: <Link href={`/admin/crm/customers/${deal.customerId}`}>{deal.customer?.name}</Link>

@@ -155,6 +155,8 @@ export const nomenclature = pgTable("nomenclature", {
   quantityOnHand: integer("quantity_on_hand").notNull().default(0),
   quantityReserved: integer("quantity_reserved").notNull().default(0),
   city: text("city").notNull().default(""),
+  registered: boolean("registered"),
+  onOrder: boolean("on_order").notNull().default(false),
   isPublished: boolean("is_published").notNull().default(false),
   createdAt: timestamps.createdAt,
   updatedAt: timestamps.updatedAt,
@@ -170,6 +172,7 @@ export const nomenclatureAttributes = pgTable(
       .notNull()
       .references(() => attributeDefs.id),
     valueNumber: doublePrecision("value_number"),
+    valueText: text("value_text"),
   },
   (table) => [
     primaryKey({ columns: [table.nomenclatureId, table.attributeDefId] }),
@@ -196,6 +199,8 @@ export const listings = pgTable("listings", {
   priceKopeks: integer("price_kopeks").notNull(),
   compareAtKopeks: integer("compare_at_kopeks"),
   city: text("city").notNull().default(""),
+  registered: boolean("registered"),
+  onOrder: boolean("on_order").notNull().default(false),
   quantity: integer("quantity").notNull().default(1),
   status: listingStatus("status").notNull().default("draft"),
   rejectionReason: text("rejection_reason").notNull().default(""),
@@ -214,6 +219,7 @@ export const listingAttributes = pgTable(
       .notNull()
       .references(() => attributeDefs.id),
     valueNumber: doublePrecision("value_number"),
+    valueText: text("value_text"),
   },
   (table) => [primaryKey({ columns: [table.listingId, table.attributeDefId] })],
 );
@@ -226,6 +232,19 @@ export const listingImages = pgTable("listing_images", {
   path: text("path").notNull(),
   sort: integer("sort").notNull().default(0),
 });
+
+export const nomenclatureImages = pgTable(
+  "nomenclature_images",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    nomenclatureId: uuid("nomenclature_id")
+      .notNull()
+      .references(() => nomenclature.id),
+    path: text("path").notNull(),
+    sort: integer("sort").notNull().default(0),
+  },
+  (table) => [index("nomenclature_images_nomenclature_id_idx").on(table.nomenclatureId)],
+);
 
 export const stockMovements = pgTable("stock_movements", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -369,6 +388,23 @@ export const favorites = pgTable(
   ],
 );
 
+export const viewHistory = pgTable(
+  "view_history",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    listingId: uuid("listing_id")
+      .notNull()
+      .references(() => listings.id),
+    userId: uuid("user_id").references(() => users.id),
+    guestToken: text("guest_token"),
+    viewedAt: timestamp("viewed_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("view_history_user_listing").on(table.listingId, table.userId),
+    uniqueIndex("view_history_guest_listing").on(table.listingId, table.guestToken),
+  ],
+);
+
 export const listingThreads = pgTable(
   "listing_threads",
   {
@@ -410,6 +446,8 @@ export const outboundEmails = pgTable("outbound_emails", {
   subject: text("subject").notNull(),
   bodyText: text("body_text").notNull(),
   bodyHtml: text("body_html").notNull(),
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+  sendError: text("send_error").notNull().default(""),
   createdAt: timestamps.createdAt,
 });
 
@@ -494,6 +532,13 @@ export const listingMessagesRelations = relations(listingMessages, ({ one }) => 
   }),
 }));
 
+export const nomenclatureImagesRelations = relations(nomenclatureImages, ({ one }) => ({
+  nomenclature: one(nomenclature, {
+    fields: [nomenclatureImages.nomenclatureId],
+    references: [nomenclature.id],
+  }),
+}));
+
 export const listingImagesRelations = relations(listingImages, ({ one }) => ({
   listing: one(listings, {
     fields: [listingImages.listingId],
@@ -522,6 +567,7 @@ export const nomenclatureRelations = relations(nomenclature, ({ one, many }) => 
     references: [brands.id],
   }),
   attributes: many(nomenclatureAttributes),
+  images: many(nomenclatureImages),
   movements: many(stockMovements),
   listing: one(listings, {
     fields: [nomenclature.id],

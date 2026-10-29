@@ -1,48 +1,32 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { logoutAction } from "@/actions/store";
+import { MobileNav } from "@/components/mobile-nav";
+import { TagSearch } from "@/components/tag-search";
+import { UserMenu } from "@/components/user-menu";
 import { cartCount } from "@/lib/cart";
+import { catalogFilters, catalogTags } from "@/lib/catalog";
 import { site } from "@/lib/site";
 import { getCurrentUser } from "@/lib/session";
 
 export async function SiteHeader() {
   const user = await getCurrentUser();
   const count = await cartCount();
+  const [tags, filters] = await Promise.all([catalogTags(), catalogFilters()]);
   return (
-    <header className="border-b border-line bg-white text-ink">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-4">
-        <Link href="/" className="font-display text-xl tracking-wide text-navy">
-          {site.name}
-        </Link>
-        <form action="/catalog" className="min-w-48 flex-1">
-          <input
-            name="q"
-            placeholder="Поиск по технике"
-            className="w-full rounded-full border border-line bg-paper px-4 py-2 text-sm text-ink outline-none focus:border-navy"
-          />
-        </form>
-        <nav className="flex flex-wrap items-center gap-3 text-sm">
-          <Link href="/catalog">Каталог</Link>
-          <Link href="/favorites">Избранное</Link>
-          <Link href="/cart">Корзина{count > 0 ? ` (${count})` : ""}</Link>
-          <Link href={user ? "/account/orders" : "/orders"}>Заказы</Link>
-          <Link href={user ? "/account/messages" : "/messages"}>Сообщения</Link>
-          {user?.staffRole === "manager" ? <Link href="/admin/crm">CRM</Link> : null}
-          {user?.staffRole === "manager" ? <Link href="/admin/nomenclature">Склад</Link> : null}
-          {user?.staffRole === "moderator" || user?.staffRole === "manager" ? (
-            <Link href="/admin/moderation">Модерация</Link>
-          ) : null}
-          {user ? <Link href="/account">Кабинет</Link> : <Link href="/login">Войти</Link>}
-        </nav>
-        {user ? (
-          <form action={logoutAction}>
-            <button className="text-sm text-muted" type="submit">
-              Выйти
-            </button>
-          </form>
-        ) : null}
-      </div>
-    </header>
+    <>
+      <header className="sticky top-0 z-40 border-b border-line bg-white text-ink">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3 lg:flex-nowrap">
+          <Link href="/" className="mr-auto shrink-0 font-display text-xl tracking-wide text-navy lg:mr-0">
+            {site.name}
+          </Link>
+          <div className="order-last w-full lg:order-none lg:min-w-56 lg:flex-1">
+            <TagSearch tags={tags} filters={filters} />
+          </div>
+          <UserMenu cartCount={count} loggedIn={Boolean(user)} staffRole={user?.staffRole ?? null} />
+        </div>
+      </header>
+      <MobileNav cartCount={count} loggedIn={Boolean(user)} />
+    </>
   );
 }
 
