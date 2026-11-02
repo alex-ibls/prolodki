@@ -1,7 +1,7 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 
 type Vessel = { slug: string; name: string };
 
@@ -14,9 +14,6 @@ const kinds = [
 
 type Kind = (typeof kinds)[number]["id"];
 
-const selectClass =
-  "w-full appearance-none bg-transparent py-2 pl-3 pr-8 text-sm text-ink outline-none disabled:text-muted";
-
 export function QuickFilters({
   search,
   vessels,
@@ -27,8 +24,25 @@ export function QuickFilters({
   categoryName: string;
 }) {
   const router = useRouter();
-  const [kind, setKind] = useState<Kind | "">("");
+  const root = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState<Kind | null>(null);
   const params = new URLSearchParams(search);
+
+  useEffect(() => {
+    if (!open) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(null);
+    }
+    function onPointer(event: PointerEvent) {
+      if (!root.current?.contains(event.target as Node)) setOpen(null);
+    }
+    window.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPointer);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onPointer);
+    };
+  }, [open]);
 
   function go(changes: Record<string, string | null>) {
     const next = new URLSearchParams(search);
@@ -39,78 +53,60 @@ export function QuickFilters({
     }
     const text = next.toString();
     router.push(text ? `/?${text}` : "/");
-    setKind("");
+    setOpen(null);
   }
 
-  function apply(value: string) {
-    if (!kind || !value) return;
+  function apply(kind: Kind, value: string) {
+    if (!value) return;
     if (kind === "price") go({ sort: value });
     else if (kind === "date") go({ sort: value === "new" ? null : value });
     else if (kind === "vessel") go({ category: value });
     else go({ registered: value });
   }
 
-  const options =
-    kind === "price"
-      ? [
-          { value: "price_asc", label: "Дешевле" },
-          { value: "price_desc", label: "Дороже" },
-        ]
-      : kind === "date"
-        ? [
-            { value: "new", label: "Новые" },
-            { value: "old", label: "Старые" },
-          ]
-        : kind === "vessel"
-          ? vessels.map((item) => ({ value: item.slug, label: item.name }))
-          : kind === "registered"
-            ? [
-                { value: "yes", label: "Регистрат" },
-                { value: "no", label: "Нерегистрат" },
-              ]
-            : [];
-
   const tags = filterTags(params, vessels, categoryName);
 
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-2">
-      <div className="field flex w-full items-center border border-line bg-white sm:w-auto">
-        <label className="relative min-w-0 flex-1">
-          <span className="sr-only">Тип фильтра</span>
-          <select
-            value={kind}
-            className={selectClass}
-            onChange={(event) => setKind(event.target.value as Kind | "")}
-          >
-            <option value="">Тип</option>
-            {kinds.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-          <Caret />
-        </label>
-        <span className="h-5 w-px shrink-0 bg-line" />
-        <label className="relative min-w-0 flex-1">
-          <span className="sr-only">Значение фильтра</span>
-          <select
-            key={kind}
-            defaultValue=""
-            disabled={!kind}
-            className={selectClass}
-            onChange={(event) => apply(event.target.value)}
-          >
-            <option value="">Значение</option>
-            {options.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-          <Caret />
-        </label>
-      </div>
+    <div ref={root} className="mb-4 flex flex-wrap items-center gap-2">
+      {kinds.map((item) => {
+        const options = valuesOf(item.id, vessels);
+        const current = selectedOf(item.id, params);
+        const active = Boolean(current);
+        return (
+          <div key={item.id} className="relative">
+            <button
+              type="button"
+              className={`tag border px-3 py-2 text-sm ${open === item.id || active ? "border-navy bg-navy font-semibold text-white" : "border-line bg-white"}`}
+              aria-expanded={open === item.id}
+              aria-haspopup="listbox"
+              onClick={() => setOpen((value) => (value === item.id ? null : item.id))}
+            >
+              {item.label}
+            </button>
+            {open === item.id ? (
+              <ul
+                role="listbox"
+                aria-label={item.label}
+                className="absolute left-0 top-full z-30 mt-1 max-h-64 min-w-full overflow-auto rounded-2xl border border-line bg-white py-1 shadow-xl"
+              >
+                {options.map((option) => (
+                  <li key={option.value} role="presentation">
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={option.value === current}
+                      className={`block w-full whitespace-nowrap px-3 py-2 text-left text-sm hover:bg-paper ${option.value === current ? "font-semibold text-navy" : ""}`}
+                      onClick={() => apply(item.id, option.value)}
+                    >
+                      {option.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        );
+      })}
       {tags.map((tag) => (
         <button
           key={tag.id}
@@ -128,13 +124,33 @@ export function QuickFilters({
   );
 }
 
-function Caret() {
-  return (
-    <span
-      aria-hidden
-      className="pointer-events-none absolute top-1/2 right-3 size-1.5 -translate-y-1/2 rotate-45 border-r border-b border-muted"
-    />
-  );
+function valuesOf(kind: Kind, vessels: Vessel[]) {
+  if (kind === "price") {
+    return [
+      { value: "price_asc", label: "Дешевле" },
+      { value: "price_desc", label: "Дороже" },
+    ];
+  }
+  if (kind === "date") {
+    return [
+      { value: "new", label: "Новые" },
+      { value: "old", label: "Старые" },
+    ];
+  }
+  if (kind === "vessel") return vessels.map((item) => ({ value: item.slug, label: item.name }));
+  return [
+    { value: "yes", label: "Регистрат" },
+    { value: "no", label: "Нерегистрат" },
+  ];
+}
+
+function selectedOf(kind: Kind, params: URLSearchParams) {
+  const sort = params.get("sort");
+  if (kind === "price") return sort === "price_asc" || sort === "price_desc" ? sort : "";
+  if (kind === "date") return sort === "old" ? "old" : "";
+  if (kind === "vessel") return params.get("category") ?? "";
+  const registered = params.get("registered");
+  return registered === "yes" || registered === "no" ? registered : "";
 }
 
 function filterTags(params: URLSearchParams, vessels: Vessel[], categoryName: string) {

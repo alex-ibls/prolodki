@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { formatOffer, formatRub } from "@/lib/format";
+import { formatCardWhen, formatOffer, formatPhone, formatRub } from "@/lib/format";
+import { site } from "@/lib/site";
 
 type SpecSource = {
   valueNumber: number | null;
@@ -21,6 +22,8 @@ export type CardData = {
   images: { path: string }[];
   attributes: SpecSource[];
   category?: { name: string } | null;
+  createdAt?: Date | string | null;
+  phone?: string | null;
 };
 
 export function specsOf(item: { attributes: SpecSource[] }) {
@@ -142,47 +145,45 @@ export function SpecGrid({ items }: { items: { key: string; code: string; label:
   );
 }
 
-const conditionTag = {
-  new: { label: "Новое", className: "bg-white text-navy" },
-  used: { label: "БУ", className: "bg-navy text-white" },
-};
-
-const availabilityTag = {
-  stock: { label: "В наличии", className: "bg-white text-moss" },
-  order: { label: "На заказ", className: "bg-navy text-white" },
-};
-
 export function ProductCard({ item }: { item: CardData }) {
   const photo = item.images[0]?.path;
-  const tag = conditionTag[item.condition];
-  const availability = availabilityTag[item.onOrder ? "order" : "stock"];
-  const href = `/product/${item.slug}`;
+  const place = item.condition === "used" && item.source === "individual" ? item.city.trim() : "";
+  const when = item.createdAt ? formatCardWhen(item.createdAt) : "";
+  const meta = [place, when].filter(Boolean).join(" · ");
+  const phone = companyPhone(item);
   return (
-    <article className="h-full">
-      <Link href={href} className="flex h-full flex-col overflow-hidden rounded-3xl border border-line bg-card">
-        <span className="relative block bg-[#e8f4fc]">
+    <article className="min-w-0">
+      <Link href={`/product/${item.slug}`} className="block">
+        <span className="relative block overflow-hidden rounded-[16px] bg-[#ececec]">
           {photo ? (
             // Local uploads are served by the app route and are not part of the image optimizer.
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={`/media/${photo}`} alt="" className="aspect-[3/4] w-full object-cover" />
+            <img src={`/media/${photo}`} alt="" className="aspect-square w-full object-cover" />
           ) : (
-            <span className="flex aspect-[3/4] items-end bg-navy p-4 text-sm text-white">{item.category?.name}</span>
+            <span className="flex aspect-square items-end bg-navy p-3 text-sm text-white">{item.category?.name}</span>
           )}
-          <span className="absolute left-2 top-2 flex flex-col items-start gap-1">
-            <span className={`tag px-2 py-1 text-xs font-semibold ${tag.className}`}>{tag.label}</span>
-            <span className={`tag px-2 py-1 text-xs font-semibold ${availability.className}`}>{availability.label}</span>
-          </span>
+          {item.condition === "used" ? (
+            <span className="absolute bottom-2 left-2 rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] font-medium text-white">
+              БУ
+            </span>
+          ) : null}
         </span>
-        <span className="flex flex-1 flex-col gap-2 p-3">
-          <span className="line-clamp-2 text-sm leading-5">{item.title}</span>
-          <span className="mt-auto flex flex-wrap items-baseline gap-x-2">
-            <span className="text-base font-semibold">{formatOffer(item.priceKopeks)}</span>
+        <span className="mt-1.5 block">
+          <span className="flex flex-wrap items-baseline gap-x-1.5">
+            <span className="text-[15px] font-bold leading-5 text-[#141414]">{formatOffer(item.priceKopeks)}</span>
             {item.compareAtKopeks && item.compareAtKopeks > item.priceKopeks ? (
-              <span className="text-xs text-muted line-through">{formatRub(item.compareAtKopeks)}</span>
+              <span className="text-xs text-[#757575] line-through">{formatRub(item.compareAtKopeks)}</span>
             ) : null}
           </span>
+          <span className="mt-0.5 line-clamp-2 text-[13px] leading-4 text-[#141414]">{item.title}</span>
+          {meta ? <span className="mt-1 block truncate text-xs leading-4 text-[#757575]">{meta}</span> : null}
         </span>
       </Link>
+      {phone ? (
+        <a href={telHref(phone)} className="mt-1 block text-[13px] font-semibold leading-4 text-navy">
+          {phone}
+        </a>
+      ) : null}
     </article>
   );
 }
@@ -211,7 +212,21 @@ export function listingCard(item: CardData): CardData {
       },
     })),
     category: item.category ? { name: item.category.name } : null,
+    createdAt: item.createdAt,
+    phone: companyPhone(item),
   };
+}
+
+export function companyPhone(item: { source: string; phone?: string | null }) {
+  if (item.source !== "company") return "";
+  return formatPhone(item.phone?.trim() || site.phone);
+}
+
+export function telHref(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 11 && digits.startsWith("8")) return `tel:+7${digits.slice(1)}`;
+  if (digits.length === 11 && digits.startsWith("7")) return `tel:+${digits}`;
+  return `tel:${digits || phone}`;
 }
 
 export function ProductGrid({ items }: { items: CardData[] }) {
@@ -219,7 +234,7 @@ export function ProductGrid({ items }: { items: CardData[] }) {
     return <p className="text-muted">В этой подборке пока нет объявлений.</p>;
   }
   return (
-    <div className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-x-2 gap-y-4 sm:gap-x-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
       {items.map((item) => (
         <ProductCard key={item.slug} item={item} />
       ))}

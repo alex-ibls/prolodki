@@ -15,11 +15,11 @@ export async function SiteHeader() {
   return (
     <>
       <header className="sticky top-0 z-40 border-b border-line bg-white text-ink">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3 lg:flex-nowrap">
-          <Link href="/" className="mr-auto shrink-0 font-display text-xl tracking-wide text-navy lg:mr-0">
+        <div className="mx-auto flex max-w-6xl items-center gap-2 px-3 py-2 sm:gap-3 sm:px-4 sm:py-3">
+          <Link href="/" className="shrink-0 font-display text-lg tracking-wide text-navy sm:text-xl">
             {site.name}
           </Link>
-          <div className="order-last w-full lg:order-none lg:min-w-56 lg:flex-1">
+          <div className="min-w-0 flex-1">
             <TagSearch tags={tags} filters={filters} />
           </div>
           <UserMenu cartCount={count} loggedIn={Boolean(user)} staffRole={user?.staffRole ?? null} />
@@ -45,7 +45,7 @@ export function SiteHeaderSlot() {
 export function SiteFooter() {
   return (
     <footer className="mt-auto border-t border-line bg-white">
-      <div className="mx-auto grid max-w-6xl gap-4 px-4 py-8 text-sm text-muted md:grid-cols-3">
+      <div className="mx-auto grid max-w-6xl gap-3 px-3 py-5 text-sm text-muted sm:px-4 sm:py-8 md:grid-cols-3">
         <div>
           <p className="font-display text-base text-ink">{site.name}</p>
           <p>{site.address}</p>

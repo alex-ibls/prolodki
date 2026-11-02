@@ -72,12 +72,12 @@ export function ProductGallery({ title, images }: { title: string; images: { pat
   }
 
   if (!photo) {
-    return <div className="flex h-56 items-end rounded-2xl bg-navy p-6 text-white sm:h-80 sm:rounded-3xl">{title}</div>;
+    return <div className="-mx-3 flex h-56 items-end bg-navy p-6 text-white sm:mx-0 sm:h-80 sm:rounded-2xl">{title}</div>;
   }
 
   return (
     <div>
-      <div className="relative overflow-hidden rounded-2xl bg-[#e8f4fc] sm:rounded-3xl">
+      <div className="relative -mx-3 overflow-hidden bg-[#e8f4fc] sm:mx-0 sm:rounded-2xl">
         <div
           ref={strip}
           className="flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"

@@ -185,7 +185,7 @@ export function TagSearch({ tags, filters }: { tags: CatalogTag[]; filters: Filt
           aria-controls={listId}
           aria-autocomplete="list"
           placeholder={selected.length || chips.length || query ? "" : "Раздел, бренд или фильтр"}
-          className="min-w-36 flex-1 bg-transparent px-2 py-1 text-sm text-ink outline-none"
+          className="min-w-0 flex-1 bg-transparent px-2 py-1 text-sm text-ink outline-none"
           onChange={(event) => {
             setDraft(event.target.value);
             setActive(0);

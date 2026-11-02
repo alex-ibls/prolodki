@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ru" className={`${sans.variable} ${display.variable} h-full`}>
-      <body className="flex min-h-full flex-col pb-[calc(4.5rem+env(safe-area-inset-bottom))] antialiased lg:pb-0">
+      <body className="flex min-h-full flex-col pb-[calc(4.25rem+env(safe-area-inset-bottom))] antialiased lg:pb-0">
         <CrumbProvider>
           <SiteHeaderSlot />
           <BreadcrumbBar />

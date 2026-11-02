@@ -5,7 +5,7 @@ import { sendListingMessageAction } from "@/actions/messages";
 import { addToCartAction } from "@/actions/store";
 import { CrumbTitle } from "@/components/breadcrumbs";
 import { ProductGallery } from "@/components/product-gallery";
-import { ErrorNote, registeredSpec, SpecGrid, specsOf, specValue } from "@/components/catalog-ui";
+import { ErrorNote, companyPhone, registeredSpec, SpecGrid, specsOf, specValue, telHref } from "@/components/catalog-ui";
 import { RevealPhone } from "@/components/reveal-phone";
 import { TrackView } from "@/components/track-view";
 import { buttonClass, inputClass, secondaryClass } from "@/components/styles";
@@ -33,30 +33,38 @@ export default async function ProductPage({
   const available = item.quantity > 0;
   const stats = (await listingStats([item.id])).get(item.id);
   const saved = await isFavorite(item.id);
+  const companyLine = companyPhone({ source: item.source, phone: item.organization?.phone });
   const hasPhone = Boolean(item.seller?.phone?.trim() || item.organization?.phone?.trim());
   const sellerHere = isListingSeller(user ?? null, item);
   const thread = sellerHere ? null : await buyerThreadForListing(item.id);
   const path = categoryPath(await allCategories(), item.categoryId);
   return (
-    <main className="mx-auto grid max-w-6xl gap-6 px-4 py-4 sm:py-8 lg:grid-cols-2">
+    <main className="mx-auto grid max-w-6xl gap-4 px-3 py-3 sm:px-4 sm:py-8 lg:grid-cols-2 lg:gap-6">
       <CrumbTitle label={item.title} />
       <ProductGallery title={item.title} images={item.images} />
       <div>
-        <p className="text-sm text-muted">
+        <p className="text-[1.75rem] font-bold leading-tight text-[#141414]">{formatOffer(item.priceKopeks)}</p>
+        {item.compareAtKopeks && item.priceKopeks > 0 && item.compareAtKopeks > item.priceKopeks ? (
+          <p className="text-sm text-[#757575] line-through">{formatRub(item.compareAtKopeks)}</p>
+        ) : null}
+        <h1 className="mt-1 text-xl leading-6 sm:text-2xl">{item.title}</h1>
+        <p className="mt-2 text-sm text-muted">
           <Link href={item.category?.slug ? `/?category=${item.category.slug}` : "/"} className="hover:text-copper">
             {path}
           </Link>
           {" · "}
-          {[sourceLabel[item.source], conditionLabel[item.condition], item.onOrder ? "На заказ" : "В наличии", item.city].filter(Boolean).join(" · ")}
+          {[
+            sourceLabel[item.source],
+            conditionLabel[item.condition],
+            item.onOrder ? "На заказ" : "В наличии",
+            item.condition === "used" && item.source === "individual" ? item.city : "",
+          ]
+            .filter(Boolean)
+            .join(" · ")}
         </p>
-        <h1 className="mt-2 text-2xl sm:text-3xl">{item.title}</h1>
-        <p className="mt-2 text-sm text-muted">Просмотры: {stats?.view ?? 0}</p>
-        <TrackView listingId={item.id} slug={item.slug} />
-        {item.compareAtKopeks && item.priceKopeks > 0 && item.compareAtKopeks > item.priceKopeks ? (
-          <p className="mt-4 text-muted line-through">{formatRub(item.compareAtKopeks)}</p>
-        ) : null}
-        <p className="text-2xl font-semibold sm:text-3xl">{formatOffer(item.priceKopeks)}</p>
+        <p className="mt-1 text-sm text-muted">Просмотры: {stats?.view ?? 0}</p>
         <p className="mt-2 text-sm">{available ? `В наличии: ${item.quantity}` : "Нет в наличии"}</p>
+        <TrackView listingId={item.id} slug={item.slug} />
         <ErrorNote message={one("error")} />
         {item.priceKopeks <= 0 ? <p className="mt-4 text-sm">Напишите продавцу, чтобы узнать стоимость.</p> : null}
         {available && item.priceKopeks > 0 ? (
@@ -86,7 +94,15 @@ export default async function ProductPage({
           <input type="hidden" name="slug" value={item.slug} />
           <button className={`${secondaryClass} w-full sm:w-auto`}>{saved ? "В избранном" : "В избранное"}</button>
         </form>
-        {hasPhone ? <RevealPhone listingId={item.id} /> : null}
+        {companyLine ? (
+          <p className="mt-4">
+            <a href={telHref(companyLine)} className="text-lg font-semibold">
+              {companyLine}
+            </a>
+          </p>
+        ) : hasPhone ? (
+          <RevealPhone listingId={item.id} />
+        ) : null}
         {sellerHere ? (
           <p className="mt-4 text-sm">
             <Link href="/account/messages" className="font-semibold">

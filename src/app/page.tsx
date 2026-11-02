@@ -35,7 +35,7 @@ export default async function HomePage({
   const selected = categories.find((item) => item.slug === query.category);
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-4 sm:py-6">
+    <main className="mx-auto max-w-6xl px-3 py-3 sm:px-4 sm:py-6">
       <h1 className="sr-only">{site.name}</h1>
       <QuickFilters
         search={current.toString()}

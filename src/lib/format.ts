@@ -11,6 +11,18 @@ export function formatOffer(kopeks: number) {
   return formatRub(kopeks);
 }
 
+export function formatCardWhen(value: Date | string) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diff = Math.round((start.getTime() - day.getTime()) / 86_400_000);
+  if (diff === 0) return "сегодня";
+  if (diff === 1) return "вчера";
+  return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short" }).format(date).replace(".", "");
+}
+
 export function formatDate(value: Date) {
   return new Intl.DateTimeFormat("ru-RU", {
     dateStyle: "medium",
