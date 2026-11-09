@@ -1,13 +1,22 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+import { postgresCredentials } from "./postgres";
 import * as schema from "./schema";
 
 const globalForDb = globalThis as unknown as { client?: ReturnType<typeof postgres> };
 
 function createClient() {
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error("DATABASE_URL не задан");
-  return postgres(url, { max: 10 });
+  const config = postgresCredentials();
+  if ("url" in config) return postgres(config.url, { max: 10 });
+  return postgres({
+    host: config.host,
+    port: config.port,
+    username: config.user,
+    password: config.password,
+    database: config.database,
+    ssl: config.ssl,
+    max: 10,
+  });
 }
 
 export const client = globalForDb.client ?? createClient();

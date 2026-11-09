@@ -133,7 +133,7 @@ export function PhotoField({
         ) : null}
       </div>
       <span className="mt-1 block text-xs text-muted">
-        До 10 фото. JPEG, PNG или WebP, до 20 МБ. Файл сохраняется как WebP не шире 1600 px
+        До 10 фото. JPEG, PNG или WebP, до 20 МБ
         {kept.length > 0 ? `. Сейчас ${kept.length} из 10` : ""}
       </span>
       {message ? <span className="mt-1 block text-xs text-red-700">{message}</span> : null}

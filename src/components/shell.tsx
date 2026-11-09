@@ -2,11 +2,11 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Logo } from "@/components/logo";
 import { MobileNav } from "@/components/mobile-nav";
-import { TagSearch } from "@/components/tag-search";
+import { CatalogSearch } from "@/components/catalog-search";
 import { UserMenu } from "@/components/user-menu";
 import { brandBarClass } from "@/components/styles";
 import { cartCount } from "@/lib/cart";
-import { allCategories, catalogFilters, catalogTags } from "@/lib/catalog";
+import { allCategories } from "@/lib/catalog";
 import { categoryPathMap } from "@/lib/sef";
 import { withoutDemo } from "@/lib/taxonomy";
 import { site } from "@/lib/site";
@@ -15,8 +15,7 @@ import { getCurrentUser } from "@/lib/session";
 export async function SiteHeader() {
   const user = await getCurrentUser();
   const count = await cartCount();
-  const [tags, filters, categories] = await Promise.all([catalogTags(), catalogFilters(), allCategories()]);
-  const paths = categoryPathMap(withoutDemo(categories));
+  const paths = categoryPathMap(withoutDemo(await allCategories()));
   return (
     <>
       <header className="sticky top-0 z-40 text-white">
@@ -30,7 +29,7 @@ export async function SiteHeader() {
               <Logo />
             </Link>
             <div className="min-w-0 flex-1">
-              <TagSearch tags={tags} filters={filters} paths={paths} />
+              <CatalogSearch paths={paths} />
             </div>
             <UserMenu cartCount={count} loggedIn={Boolean(user)} staffRole={user?.staffRole ?? null} />
           </div>

@@ -207,7 +207,7 @@ export const listings = pgTable("listings", {
   searchVector: tsvector("search_vector"),
   createdAt: timestamps.createdAt,
   updatedAt: timestamps.updatedAt,
-});
+}, (table) => [index("listings_search_idx").using("gin", table.searchVector)]);
 
 export const listingAttributes = pgTable(
   "listing_attributes",

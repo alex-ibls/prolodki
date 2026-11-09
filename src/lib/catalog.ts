@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, gte, ilike, inArray, lte, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
+import { ensureSearch } from "@/db/ensure";
 import {
   attributeDefs,
   brands,
@@ -7,8 +8,7 @@ import {
   listingImages,
   listings,
 } from "@/db/schema";
-import type { CatalogTag, FilterField } from "@/lib/catalog-tags";
-import { categoryPath, withoutDemo } from "@/lib/taxonomy";
+import { withoutDemo } from "@/lib/taxonomy";
 
 export type CatalogQuery = {
   q?: string;
@@ -30,81 +30,6 @@ const pageSize = 12;
 
 export async function allCategories() {
   return db.select().from(categories).orderBy(asc(categories.sort), asc(categories.name));
-}
-
-export async function catalogFilters(): Promise<FilterField[]> {
-  const rows = await db
-    .select()
-    .from(attributeDefs)
-    .where(eq(attributeDefs.filterable, true))
-    .orderBy(asc(attributeDefs.cardOrder), asc(attributeDefs.name));
-  const fields: FilterField[] = [
-    { code: "price", name: "Цена", unit: "₽", minParam: "price_min", maxParam: "price_max" },
-  ];
-  const seen = new Set<string>();
-  for (const row of rows) {
-    if (seen.has(row.code)) continue;
-    seen.add(row.code);
-    fields.push({
-      code: row.code,
-      name: row.name,
-      unit: row.unit,
-      minParam: `attr_${row.code}_min`,
-      maxParam: `attr_${row.code}_max`,
-    });
-  }
-  return fields;
-}
-
-export async function catalogTags(): Promise<CatalogTag[]> {
-  const categoryRows = withoutDemo(await allCategories());
-  const brandRows = withoutDemo(await db.select().from(brands).orderBy(asc(brands.sort), asc(brands.name)));
-  const cityRows = await db
-    .selectDistinct({ city: listings.city })
-    .from(listings)
-    .where(and(eq(listings.status, "published"), sql`${listings.city} <> ''`))
-    .orderBy(asc(listings.city));
-  return [
-    ...categoryRows.map((category) => ({
-      id: `category:${category.slug}`,
-      label: category.name,
-      detail: categoryPath(categoryRows, category.id),
-      group: "Раздел",
-      param: "category" as const,
-      value: category.slug,
-    })),
-    ...brandRows.map((brand) => ({
-      id: `brand:${brand.slug}`,
-      label: brand.name,
-      detail: brand.name,
-      group: "Бренд",
-      param: "brand" as const,
-      value: brand.slug,
-    })),
-    ...cityRows.map((row) => ({
-      id: `city:${row.city}`,
-      label: row.city,
-      detail: row.city,
-      group: "Город",
-      param: "city" as const,
-      value: row.city,
-    })),
-    { id: "condition:new", label: "Новый", detail: "Новый", group: "Состояние", param: "condition", value: "new" },
-    { id: "condition:used", label: "БУ", detail: "БУ", group: "Состояние", param: "condition", value: "used" },
-    { id: "source:company", label: "Компания", detail: "Компания", group: "Продавец", param: "source", value: "company" },
-    {
-      id: "source:individual",
-      label: "Частное лицо",
-      detail: "Частное лицо",
-      group: "Продавец",
-      param: "source",
-      value: "individual",
-    },
-    { id: "registered:yes", label: "Регистрат", detail: "Регистрат", group: "Регистрация", param: "registered", value: "yes" },
-    { id: "registered:no", label: "Нерегистрат", detail: "Нерегистрат", group: "Регистрация", param: "registered", value: "no" },
-    { id: "availability:stock", label: "В наличии", detail: "В наличии", group: "Наличие", param: "availability", value: "stock" },
-    { id: "availability:order", label: "На заказ", detail: "На заказ", group: "Наличие", param: "availability", value: "order" },
-  ];
 }
 
 export function subtreeIds(
@@ -160,6 +85,7 @@ export function catalogQueryFromSearchParams(params: URLSearchParams): CatalogQu
 }
 
 export async function searchCatalog(query: CatalogQuery) {
+  await ensureSearch();
   const categoryRows = withoutDemo(await allCategories());
   const conditions: SQL[] = [eq(listings.status, "published")];
 
@@ -191,10 +117,9 @@ export async function searchCatalog(query: CatalogQuery) {
   if (query.priceMax && Number.isFinite(maxRub)) {
     conditions.push(lte(listings.priceKopeks, Math.round(maxRub * 100)));
   }
-  if (query.q?.trim()) {
-    conditions.push(
-      sql`${listings.searchVector} @@ plainto_tsquery('russian', ${query.q.trim()})`,
-    );
+  const term = query.q?.trim();
+  if (term) {
+    conditions.push(sql`${listings.searchVector} @@ listings_search_query(${term})`);
   }
 
   const selected = categoryRows.find((item) => item.slug === query.category);
@@ -255,6 +180,9 @@ export async function searchCatalog(query: CatalogQuery) {
   const order = [];
   if (query.priceSort === "asc") order.push(asc(listings.priceKopeks));
   if (query.priceSort === "desc") order.push(desc(listings.priceKopeks));
+  if (term && !query.priceSort) {
+    order.push(desc(sql`ts_rank_cd(${listings.searchVector}, listings_search_query(${term}))`));
+  }
   order.push(desc(listings.createdAt));
   order.push(asc(listings.id));
 
