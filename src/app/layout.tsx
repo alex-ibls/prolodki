@@ -19,7 +19,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const names = Object.fromEntries((await allCategories()).map((item) => [item.slug, item.name]));
   return (
     <html lang="ru" className={`${sans.variable} ${display.variable} h-full`}>
-      <body className="flex min-h-full flex-col bg-paper pb-[calc(4.25rem+env(safe-area-inset-bottom))] antialiased lg:pb-0">
+      <body className="flex min-h-full flex-col bg-paper antialiased">
         <CrumbProvider>
           <SiteHeaderSlot />
           <BreadcrumbBar names={names} />

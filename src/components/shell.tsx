@@ -58,7 +58,7 @@ export function SiteHeaderSlot() {
 
 export function SiteFooter() {
   return (
-    <footer className={`${brandBarClass} mt-auto border-t border-white/15`}>
+    <footer className={`${brandBarClass} mt-auto border-t border-white/15 pb-[calc(3.5rem+1px+env(safe-area-inset-bottom))] lg:pb-0`}>
       <div className="mx-auto grid max-w-6xl gap-4 px-3 py-6 text-sm sm:px-4 sm:py-8 md:grid-cols-3">
         <div>
           <Logo domain="always" />

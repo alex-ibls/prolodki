@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import { SectionPills } from "@/components/section-pills";
 import { getCurrentUser } from "@/lib/session";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -16,15 +16,21 @@ async function AdminFrame({ children }: { children: React.ReactNode }) {
   if (!user?.staffRole) redirect("/login?next=/admin/crm");
   return (
     <div className="mx-auto max-w-7xl px-3 py-4 sm:px-4 sm:py-8">
-      <nav className="-mx-4 mb-6 flex gap-4 overflow-x-auto px-4 text-sm font-semibold text-navy sm:mx-0 sm:flex-wrap sm:px-0">
-        {user.staffRole === "manager" ? <Link href="/admin/crm" className="shrink-0">Клиенты</Link> : null}
-        {user.staffRole === "manager" ? <Link href="/admin/crm/deals" className="shrink-0">Сделки</Link> : null}
-        {user.staffRole === "manager" ? <Link href="/admin/catalog" className="shrink-0">Каталог</Link> : null}
-        {user.staffRole === "manager" ? <Link href="/admin/brands" className="shrink-0">Бренды</Link> : null}
-        {user.staffRole === "manager" ? <Link href="/admin/nomenclature" className="shrink-0">Номенклатура</Link> : null}
-        {user.staffRole === "manager" ? <Link href="/admin/orders" className="shrink-0">Заказы 1P</Link> : null}
-        <Link href="/admin/moderation" className="shrink-0">Модерация</Link>
-      </nav>
+      <SectionPills
+        items={[
+          ...(user.staffRole === "manager"
+            ? [
+                { href: "/admin/crm", label: "Клиенты" },
+                { href: "/admin/crm/deals", label: "Сделки" },
+                { href: "/admin/catalog", label: "Каталог" },
+                { href: "/admin/brands", label: "Бренды" },
+                { href: "/admin/nomenclature", label: "Номенклатура" },
+                { href: "/admin/orders", label: "Заказы 1P" },
+              ]
+            : []),
+          { href: "/admin/moderation", label: "Модерация" },
+        ]}
+      />
       {children}
     </div>
   );

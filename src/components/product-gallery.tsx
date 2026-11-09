@@ -138,33 +138,29 @@ export function ProductGallery({ title, images }: { title: string; images: { pat
             onScroll={noteScroll}
           >
             {images.map((image) => (
-              <div key={image.path} className="relative flex h-full min-w-full shrink-0 basis-full snap-center items-center justify-center">
+              <div
+                key={image.path}
+                className="flex h-full min-w-full shrink-0 basis-full snap-center items-center justify-center overflow-auto p-4 touch-auto"
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`/media/${image.path}`} alt="" className="pointer-events-none max-h-full max-w-full object-contain p-4" />
-                {images.length > 1 ? (
-                  <>
-                    <Zone label="Предыдущее фото" className="left-0 w-1/2" onTap={() => shift(-1)} onDown={armDrag} onMove={noteDrag} ready={tapped} />
-                    <Zone label="Следующее фото" className="right-0 w-1/2" onTap={() => shift(1)} onDown={armDrag} onMove={noteDrag} ready={tapped} />
-                  </>
-                ) : null}
+                <img src={`/media/${image.path}`} alt="" className="max-h-full max-w-full object-contain" />
               </div>
             ))}
           </div>
           <button
             type="button"
-            className="absolute right-3 top-3 z-20 rounded-full bg-white px-3 py-2 text-sm font-semibold text-navy"
+            aria-label="Закрыть"
+            className="absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center text-white"
             onClick={close}
           >
-            Закрыть
+            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              <path d="M6 6 18 18M18 6 6 18" />
+            </svg>
           </button>
           {images.length > 1 ? (
-            <>
-              <EdgeHint side="left" hidden={index === 0} light />
-              <EdgeHint side="right" hidden={index === images.length - 1} light />
-              <p className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-white px-3 py-1 text-sm font-semibold text-navy">
-                {index + 1} / {images.length}
-              </p>
-            </>
+            <p className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 text-sm text-white">
+              {index + 1} / {images.length}
+            </p>
           ) : null}
         </div>
       ) : null}
@@ -201,11 +197,11 @@ function Zone({
   );
 }
 
-function EdgeHint({ side, hidden, light = false }: { side: "left" | "right"; hidden: boolean; light?: boolean }) {
+function EdgeHint({ side, hidden }: { side: "left" | "right"; hidden: boolean }) {
   if (hidden) return null;
   return (
     <span
-      className={`pointer-events-none absolute top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full shadow ${side === "left" ? "left-3" : "right-3"} ${light ? "bg-white text-navy" : "bg-white/90 text-navy"}`}
+      className={`pointer-events-none absolute top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-navy shadow ${side === "left" ? "left-3" : "right-3"}`}
     >
       <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
         {side === "left" ? <path d="M14 6 8 12l6 6" /> : <path d="M10 6l6 6-6 6" />}

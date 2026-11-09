@@ -4,11 +4,12 @@ export function LogoMark({ className = "h-10 w-10" }: { className?: string }) {
   return (
     <svg viewBox="0 0 48 48" className={className} aria-hidden>
       <rect width="48" height="48" rx="12" fill="#0b78d0" />
-      <circle cx="35" cy="12" r="3" fill="#ffd15c" />
-      <path d="M22 30V13l13 15H22Z" fill="#fff" />
-      <path d="M21 30V17L13 29.5h8Z" fill="#d7f4ff" />
-      <path d="M11 31h26l-3 5H14l-3-5Z" fill="#f06a00" />
-      <path d="M7 40.5c5.5-4.5 9-4.5 14.5 0s9 4.5 14.5 0 7.5-3.5 10-2.5" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" />
+      <path fill="#fff" d="M12 24C17.2 19.6 30.8 19.6 36 24L24 41Z" />
+      <path
+        fill="#fff"
+        fillRule="evenodd"
+        d="M14 23.2C14.4 11.2 33.6 11.2 34 23.2L30.6 22.6C29.8 15.4 18.2 15.4 17.4 22.6Z"
+      />
     </svg>
   );
 }
