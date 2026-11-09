@@ -4,6 +4,9 @@ import { compare } from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
+import { isLoopbackHost, useRequestHostForAuth } from "@/lib/public-origin";
+
+useRequestHostForAuth();
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -28,6 +31,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
+    redirect({ url, baseUrl }) {
+      const base = new URL(baseUrl);
+      const target = new URL(url, base);
+      if (isLoopbackHost(target.hostname) && !isLoopbackHost(base.hostname)) {
+        return `${base.origin}${target.pathname}${target.search}`;
+      }
+      if (target.origin === base.origin) return target.toString();
+      if (url.startsWith("/") && !url.startsWith("//")) return `${base.origin}${url}`;
+      return base.origin;
+    },
     jwt({ token, user }) {
       if (user?.id) token.sub = user.id;
       return token;

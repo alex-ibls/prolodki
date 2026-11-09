@@ -56,14 +56,9 @@ export default async function AccountPage({
             <p className="mt-2 text-sm text-muted">
               Продавать можно после подтверждения {user.email}. Письмо со ссылкой уходит сразу после регистрации.
             </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <form action={resendConfirmEmailAction}>
-                <button className={secondaryClass}>Отправить письмо ещё раз</button>
-              </form>
-              <Link href="/account/letter" className={buttonClass}>
-                Открыть письмо
-              </Link>
-            </div>
+            <form action={resendConfirmEmailAction} className="mt-4">
+              <button className={secondaryClass}>Отправить письмо ещё раз</button>
+            </form>
           </>
         )}
       </section>

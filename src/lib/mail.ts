@@ -1,11 +1,29 @@
 import nodemailer, { type Transporter } from "nodemailer";
-import { and, desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { outboundEmails } from "@/db/schema";
+import { headers } from "next/headers";
 import { confirmEmailLetter } from "@/emails/confirm-email";
+import { isLoopbackHost, publicAuthUrl } from "@/lib/public-origin";
 
-export function appOrigin() {
-  return (process.env.AUTH_URL || "http://localhost:3000").replace(/\/$/, "");
+const productionOrigin = "https://lodki.in.ru.net";
+
+export async function appOrigin() {
+  const configured = publicAuthUrl();
+  if (configured) return configured;
+  try {
+    const incoming = await headers();
+    const host = (incoming.get("x-forwarded-host") ?? incoming.get("host") ?? "").split(",")[0].trim();
+    if (host && !isLoopbackHost(host)) {
+      const forwarded = incoming.get("x-forwarded-proto")?.split(",")[0]?.trim();
+      const proto = forwarded === "http" || forwarded === "https" ? forwarded : "https";
+      return `${proto}://${host}`;
+    }
+  } catch {
+    // Письмо собирается вне запроса.
+  }
+  if (process.env.NODE_ENV === "production") return productionOrigin;
+  return "http://localhost:3000";
 }
 
 type SmtpConfig = {
@@ -20,8 +38,8 @@ type SmtpConfig = {
 function readSmtp(): SmtpConfig | null {
   const host = process.env.SMTP_HOST?.trim();
   const user = process.env.SMTP_USER?.trim();
-  const pass = process.env.SMTP_PASSWORD?.trim();
-  const from = process.env.SMTP_FROM?.trim();
+  const pass = process.env.SMTP_PASSWORD?.trim() || process.env.SMTP_PASS?.trim();
+  const from = process.env.SMTP_FROM?.trim() || process.env.MAIL_FROM?.trim();
   if (!host || !user || !pass || !from) return null;
   const port = Number(process.env.SMTP_PORT || 587);
   const secure = process.env.SMTP_SECURE ? process.env.SMTP_SECURE === "true" : port === 465;
@@ -45,17 +63,10 @@ function smtpTransport(config: SmtpConfig) {
   return transport;
 }
 
-export async function latestConfirmEmail(userId: string) {
-  return db.query.outboundEmails.findFirst({
-    where: and(eq(outboundEmails.userId, userId), eq(outboundEmails.kind, "confirm_email")),
-    orderBy: desc(outboundEmails.createdAt),
-  });
-}
-
 export async function sendConfirmEmail(user: { id: string; email: string; name: string; emailVerifyToken: string }) {
   const letter = confirmEmailLetter({
     name: user.name,
-    confirmUrl: `${appOrigin()}/verify-email?token=${user.emailVerifyToken}`,
+    confirmUrl: `${await appOrigin()}/verify-email?token=${user.emailVerifyToken}`,
   });
   const [row] = await db
     .insert(outboundEmails)

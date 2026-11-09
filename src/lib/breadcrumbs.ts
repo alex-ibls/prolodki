@@ -16,7 +16,6 @@ const labels: Record<string, string> = {
   account: "Кабинет",
   listings: "Объявления",
   sales: "Продажи",
-  letter: "Письмо",
   brands: "Бренды",
   nomenclature: "Номенклатура",
   import: "Загрузка",

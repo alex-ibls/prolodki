@@ -17,7 +17,8 @@ for arg in "$@"; do
 Usage: scripts/deploy.sh [--no-pull]
 
 Забирает код из GitHub, ставит зависимости, применяет миграции из drizzle/,
-собирает Next.js и запускает или перезагружает PM2-процесс prolodki.
+собирает Next.js и запускает PM2. При каждом запуске процесс получает
+актуальные переменные из .env.
 Нужен файл .env в корне проекта. На сервере задают POSTGRESQL_*, без DATABASE_URL.
 
   --no-pull   не делать git pull --ff-only
@@ -57,11 +58,7 @@ npm ci --include=dev
 npm run db:migrate
 npm run build
 
-if pm2 describe prolodki >/dev/null 2>&1; then
-  pm2 reload ecosystem.config.cjs --update-env
-else
-  pm2 start ecosystem.config.cjs
-fi
+pm2 startOrReload ecosystem.config.cjs --update-env
 
 pm2 save
 echo "prolodki слушает ${HOSTNAME:-0.0.0.0}:3004"

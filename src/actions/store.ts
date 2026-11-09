@@ -114,7 +114,7 @@ export async function resendConfirmEmailAction() {
       name: user.name,
       emailVerifyToken: token,
     });
-    if (!delivery.sent) throw new DomainError("Не удалось отправить письмо. Его можно открыть в кабинете.");
+    if (!delivery.sent) throw new DomainError("Не удалось отправить письмо. Попробуйте ещё раз чуть позже.");
     redirect("/account?sent=1");
   });
 }
