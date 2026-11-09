@@ -20,7 +20,7 @@ async function AccountFrame({ children }: { children: React.ReactNode }) {
         <Link href="/account" className="shrink-0">Профиль</Link>
         <Link href="/account/orders" className="shrink-0">Мои заказы</Link>
         <Link href="/account/listings" className="shrink-0">Объявления</Link>
-        <Link href="/account/sales" className="shrink-0">Продажи</Link>
+        {user.staffRole === "manager" ? <Link href="/account/sales" className="shrink-0">Продажи</Link> : null}
         <Link href="/account/messages" className="shrink-0">Сообщения</Link>
       </nav>
       {user.emailVerifiedAt ? null : (

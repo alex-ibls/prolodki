@@ -34,8 +34,7 @@ export default async function EditListingPage({
       <h1 className="text-3xl">Объявление</h1>
       <SavedNote saved={one("saved")} />
       <p className="text-sm text-muted">
-        Просмотры {stat?.view ?? 0} · в избранном {stat?.favorite ?? 0} · в корзину {stat?.cart_add ?? 0} · телефон{" "}
-        {stat?.phone_reveal ?? 0}
+        Просмотры {stat?.view ?? 0} · в избранном {stat?.favorite ?? 0} · телефон {stat?.phone_reveal ?? 0}
       </p>
       <SellerForm listing={listing} error={one("error")} />
     </main>

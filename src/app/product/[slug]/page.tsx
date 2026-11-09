@@ -59,18 +59,20 @@ export default async function ProductPage({
           {[
             sourceLabel[item.source],
             conditionLabel[item.condition],
-            item.onOrder ? "На заказ" : "В наличии",
-            item.condition === "used" && item.source === "individual" ? item.city : "",
+            item.source === "company" ? (item.onOrder ? "На заказ" : "В наличии") : "",
+            item.source === "individual" ? item.city : "",
           ]
             .filter(Boolean)
             .join(" · ")}
         </p>
         <p className="mt-1 text-sm text-muted">Просмотры: {stats?.view ?? 0}</p>
-        <p className="mt-2 text-sm">{available ? `В наличии: ${item.quantity}` : "Нет в наличии"}</p>
+        {item.source === "company" ? (
+          <p className="mt-2 text-sm">{available ? `В наличии: ${item.quantity}` : "Нет в наличии"}</p>
+        ) : null}
         <TrackView listingId={item.id} slug={item.slug} />
         <ErrorNote message={one("error")} />
         {item.priceKopeks <= 0 ? <p className="mt-4 text-sm">Напишите продавцу, чтобы узнать стоимость.</p> : null}
-        {available && item.priceKopeks > 0 ? (
+        {item.source === "company" && available && item.priceKopeks > 0 ? (
           <form action={addToCartAction} className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
             <input type="hidden" name="listingId" value={item.id} />
             <input type="hidden" name="slug" value={item.slug} />

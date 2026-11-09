@@ -86,6 +86,9 @@ export async function placeOrder(
       if (!listing || listing.status !== "published") {
         throw new DomainError("Одна из позиций больше не продаётся");
       }
+      if (listing.source === "individual") {
+        throw new DomainError(`«${listing.title}» — объявление частного продавца. Уберите его из корзины и напишите продавцу.`);
+      }
       if (buyer && listing.sellerUserId && listing.sellerUserId === buyer.id) {
         throw new DomainError(`Нельзя купить своё объявление «${listing.title}»`);
       }
@@ -319,8 +322,8 @@ export function canManageLine(
   user: CurrentUser,
   line: { sellerUserId: string | null; organizationId: string | null },
 ) {
-  if (line.sellerUserId && line.sellerUserId === user.id) return true;
-  if (user.staffRole === "manager" && line.organizationId && !line.sellerUserId) return true;
+  if (line.sellerUserId) return false;
+  if (user.staffRole === "manager" && line.organizationId) return true;
   return false;
 }
 

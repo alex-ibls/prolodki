@@ -41,11 +41,11 @@ export default async function AccountPage({
         <button className={buttonClass}>Сохранить</button>
       </form>
       <section className={panelClass}>
-        <h2 className="text-lg">Продажа</h2>
+        <h2 className="text-lg">Объявления</h2>
         {user.emailVerifiedAt ? (
           <>
             <p className="mt-2 text-sm text-muted">
-              Email подтверждён. Можно публиковать объявления о БУ в этом же кабинете.
+              Email подтверждён. Можно разместить объявление о БУ: покупатель напишет или позвонит.
             </p>
             <Link href="/account/listings" className={`${buttonClass} mt-4`}>
               Мои объявления
@@ -54,7 +54,7 @@ export default async function AccountPage({
         ) : (
           <>
             <p className="mt-2 text-sm text-muted">
-              Продавать можно после подтверждения {user.email}. Письмо со ссылкой уходит сразу после регистрации.
+              Разместить объявление можно после подтверждения {user.email}. Письмо со ссылкой уходит сразу после регистрации.
             </p>
             <form action={resendConfirmEmailAction} className="mt-4">
               <button className={secondaryClass}>Отправить письмо ещё раз</button>

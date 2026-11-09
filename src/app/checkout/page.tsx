@@ -17,7 +17,9 @@ export default async function CheckoutPage({
   const { one } = await readQuery(searchParams);
   const user = await getCurrentUser();
   const { items } = await getCartView();
-  const total = items.reduce((sum, item) => sum + item.listing.priceKopeks * item.qty, 0);
+  const privateItems = items.filter((item) => item.listing.source === "individual");
+  const orderable = items.filter((item) => item.listing.source !== "individual");
+  const total = orderable.reduce((sum, item) => sum + item.listing.priceKopeks * item.qty, 0);
   return (
     <main className="mx-auto max-w-xl px-4 py-8">
       <h1 className="text-3xl">Оформление</h1>
@@ -34,6 +36,11 @@ export default async function CheckoutPage({
         </p>
       )}
       <ErrorNote message={one("error")} />
+      {privateItems.length > 0 ? (
+        <p className="mt-4 text-sm">
+          В корзине есть частные объявления. Их заказ не оформляет: уберите их в <Link href="/cart" className="font-semibold">корзине</Link> и напишите продавцу.
+        </p>
+      ) : null}
       <p className="mt-4 text-lg">К оплате {formatRub(total)}</p>
       <form action={checkoutAction} className={`${panelClass} mt-4 grid gap-3`}>
         <label className="text-sm">
@@ -67,7 +74,7 @@ export default async function CheckoutPage({
           Комментарий
           <textarea name="comment" rows={3} className={inputClass} />
         </label>
-        <button className={buttonClass} disabled={items.length === 0}>
+        <button className={buttonClass} disabled={orderable.length === 0 || privateItems.length > 0}>
           Подтвердить заказ
         </button>
       </form>

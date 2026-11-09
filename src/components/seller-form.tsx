@@ -101,17 +101,10 @@ export async function SellerForm({
           </select>
         </label>
         <label className="text-sm">
-          Наличие
-          <select name="onOrder" required defaultValue={listing?.onOrder ? "order" : "stock"} className={inputClass} disabled={locked}>
-            <option value="stock">В наличии</option>
-            <option value="order">На заказ</option>
-          </select>
-        </label>
-        <label className="text-sm">
           Цена, ₽
           <input name="price" required defaultValue={listing ? listing.priceKopeks / 100 : ""} className={inputClass} />
         </label>
-        <p className="text-sm text-muted">Частное объявление — одна единица, состояние БУ.</p>
+        <p className="text-sm text-muted">Объявление на доске: лодка БУ. Покупатель напишет или позвонит.</p>
       </div>
       <div className="text-sm">
         Описание

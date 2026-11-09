@@ -15,7 +15,9 @@ export default async function CartPage({
 }) {
   const { one } = await readQuery(searchParams);
   const { items } = await getCartView();
-  const total = items.reduce((sum, item) => sum + item.listing.priceKopeks * item.qty, 0);
+  const privateItems = items.filter((item) => item.listing.source === "individual");
+  const orderable = items.filter((item) => item.listing.source !== "individual");
+  const total = orderable.reduce((sum, item) => sum + item.listing.priceKopeks * item.qty, 0);
   return (
     <main className="mx-auto max-w-3xl px-4 py-4 sm:py-8">
       <h1 className="text-2xl sm:text-3xl">Корзина</h1>
@@ -34,24 +36,28 @@ export default async function CartPage({
                     {item.listing.title}
                   </Link>
                   <p className="text-sm text-muted">
-                    {formatRub(item.listing.priceKopeks)} · доступно {item.listing.quantity}
+                    {item.listing.source === "individual"
+                      ? "Частное объявление не оформляется заказом. Напишите продавцу и удалите позицию."
+                      : `${formatRub(item.listing.priceKopeks)} · доступно ${item.listing.quantity}`}
                   </p>
                 </div>
                 <p className="shrink-0 font-semibold">{formatRub(item.listing.priceKopeks * item.qty)}</p>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
-                <form action={updateCartAction} className="flex gap-2">
-                  <input type="hidden" name="listingId" value={item.listingId} />
-                  <input
-                    name="qty"
-                    type="number"
-                    min={1}
-                    max={Math.max(item.listing.quantity, 1)}
-                    defaultValue={item.qty}
-                    className="field w-20 border border-line px-3 py-2"
-                  />
-                  <button className={secondaryClass}>Обновить</button>
-                </form>
+                {item.listing.source === "individual" ? null : (
+                  <form action={updateCartAction} className="flex gap-2">
+                    <input type="hidden" name="listingId" value={item.listingId} />
+                    <input
+                      name="qty"
+                      type="number"
+                      min={1}
+                      max={Math.max(item.listing.quantity, 1)}
+                      defaultValue={item.qty}
+                      className="field w-20 border border-line px-3 py-2"
+                    />
+                    <button className={secondaryClass}>Обновить</button>
+                  </form>
+                )}
                 <form action={updateCartAction}>
                   <input type="hidden" name="listingId" value={item.listingId} />
                   <input type="hidden" name="intent" value="remove" />
@@ -62,13 +68,16 @@ export default async function CartPage({
           ))}
         </ul>
       )}
-      {items.length > 0 ? (
+      {orderable.length > 0 && privateItems.length === 0 ? (
         <div className="mt-6 flex items-center justify-between">
           <p className="text-xl font-semibold">{formatRub(total)}</p>
           <Link href="/checkout" className={buttonClass}>
             Оформить
           </Link>
         </div>
+      ) : null}
+      {privateItems.length > 0 ? (
+        <p className="mt-6 text-sm text-muted">Оформление откроется, когда в корзине останутся только товары компании.</p>
       ) : null}
     </main>
   );

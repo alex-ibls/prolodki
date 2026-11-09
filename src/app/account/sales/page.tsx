@@ -1,24 +1,31 @@
 import Link from "next/link";
-import { desc, eq, or } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { orderItems } from "@/db/schema";
 import { formatRub, orderCode } from "@/lib/format";
 import { lineStatusLabel } from "@/lib/labels";
 import { getCurrentUser } from "@/lib/session";
+import { companyOrg } from "@/lib/stock";
 
 export const metadata = { title: "Продажи" };
 
 export default async function SalesPage() {
   const user = await getCurrentUser();
   if (!user) return null;
-  if (!user.sellerProfile && user.staffRole !== "manager") {
-    return <main><h1 className="text-3xl">Продажи</h1><p className="mt-3 text-muted">Появятся после публикации объявлений.</p></main>;
+  if (user.staffRole !== "manager") {
+    return (
+      <main>
+        <h1 className="text-3xl">Продажи</h1>
+        <p className="mt-3 text-muted">
+          По частным объявлениям заказ не оформляется. Договорённость идёт в{" "}
+          <Link href="/account/messages" className="font-semibold">сообщениях</Link>.
+        </p>
+      </main>
+    );
   }
-  const orgId = user.sellerProfile?.organizationId;
+  const org = await companyOrg();
   const rows = await db.query.orderItems.findMany({
-    where: orgId
-      ? or(eq(orderItems.sellerUserId, user.id), eq(orderItems.organizationId, orgId))
-      : eq(orderItems.sellerUserId, user.id),
+    where: eq(orderItems.organizationId, org.id),
     with: { order: true },
     orderBy: desc(orderItems.id),
   });

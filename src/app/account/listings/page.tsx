@@ -19,7 +19,7 @@ export default async function ListingsPage() {
     return (
       <main>
         <h1 className="text-3xl">Объявления</h1>
-        <p className="mt-3 text-muted">Чтобы продавать, подтвердите email в профиле.</p>
+        <p className="mt-3 text-muted">Чтобы разместить объявление, подтвердите email в профиле.</p>
         <Link href="/account" className={`${buttonClass} mt-4`}>
           К профилю
         </Link>
@@ -48,8 +48,8 @@ export default async function ListingsPage() {
                 {listingStatusLabel[row.status]} · {formatRub(row.priceKopeks)}
               </span>
               <p className="mt-2 text-sm text-muted">
-                Просмотры {stats.get(row.id)?.view ?? 0} · в избранном {stats.get(row.id)?.favorite ?? 0} · в корзину{" "}
-                {stats.get(row.id)?.cart_add ?? 0} · телефон {stats.get(row.id)?.phone_reveal ?? 0}
+                Просмотры {stats.get(row.id)?.view ?? 0} · в избранном {stats.get(row.id)?.favorite ?? 0} · телефон{" "}
+                {stats.get(row.id)?.phone_reveal ?? 0}
               </p>
               {row.rejectionReason ? <p className="mt-2 text-sm text-red-700">Причина: {row.rejectionReason}</p> : null}
             </Link>

@@ -9,7 +9,7 @@ import {
 import { readListingDescription } from "@/lib/description";
 import { DomainError } from "@/lib/errors";
 import { parseIntStrict, parseNumber, parsePriceToKopeks } from "@/lib/format";
-import { readOnOrder, readRegistered } from "@/lib/labels";
+import { readRegistered } from "@/lib/labels";
 import { ensureIndividualSeller } from "@/lib/seller";
 import type { CurrentUser } from "@/lib/session";
 import { slugify } from "@/lib/slug";
@@ -71,8 +71,6 @@ export async function saveSellerListing(user: CurrentUser, listingId: string | n
   }
   const registered = readRegistered(String(formData.get("registered") || ""));
   if (registered === null) throw new DomainError("Укажите, регистрат или нерегистрат");
-  const onOrder = readOnOrder(String(formData.get("onOrder") || ""));
-  if (onOrder === null) throw new DomainError("Укажите, в наличии или на заказ");
   const defs = await defsForCategory(categoryId);
   const attributes = readAttributeValues(formData, defs);
   if (profile.type !== "individual") throw new DomainError("Публиковать может только частный продавец");
@@ -117,7 +115,7 @@ export async function saveSellerListing(user: CurrentUser, listingId: string | n
     compareAtKopeks: compareAt,
     city: String(formData.get("city") || user.city || "").trim(),
     registered,
-    onOrder,
+    onOrder: false,
     quantity: 1,
     status,
     rejectionReason: "",

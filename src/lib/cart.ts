@@ -69,7 +69,7 @@ export async function mergeGuestCart(userId: string, guestToken: string | undefi
   const guestItems = await db.select().from(cartItems).where(eq(cartItems.cartId, guest.id));
   for (const item of guestItems) {
     const listing = await db.query.listings.findFirst({ where: eq(listings.id, item.listingId) });
-    if (!listing || listing.status !== "published") continue;
+    if (!listing || listing.status !== "published" || listing.source === "individual") continue;
     const available = listing.quantity;
     if (available <= 0) continue;
     const [existing] = await db
@@ -94,6 +94,9 @@ export async function assertCartQty(listingId: string, qty: number) {
   if (!Number.isInteger(qty) || qty < 1) throw new DomainError("Укажите количество");
   const listing = await db.query.listings.findFirst({ where: eq(listings.id, listingId) });
   if (!listing || listing.status !== "published") throw new DomainError("Товар недоступен");
+  if (listing.source === "individual") {
+    throw new DomainError("Объявление частного продавца не оформляется заказом. Напишите продавцу.");
+  }
   if (listing.priceKopeks <= 0) throw new DomainError("Цена по запросу, в корзину не добавляется");
   if (listing.quantity < 1) throw new DomainError("Нет в наличии");
   if (qty > listing.quantity) throw new DomainError(`Доступно ${listing.quantity}`);
