@@ -6,6 +6,7 @@ const db = postgresCredentials();
 
 export default defineConfig({
   schema: "./src/db/schema.ts",
+  out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: "url" in db ? { url: db.url } : {
     host: db.host,

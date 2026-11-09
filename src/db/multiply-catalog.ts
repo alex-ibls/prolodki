@@ -72,7 +72,7 @@ async function main() {
       );
     }
     const listingId = await syncPublishedListing(db, created.id);
-    if (photos.length > 0) {
+    if (photos.length > 0 && listingId) {
       await db.insert(listingImages).values(
         photos.map((photo) => ({ listingId, path: photo.path, sort: photo.sort })),
       );

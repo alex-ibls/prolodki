@@ -12,7 +12,7 @@ export type CatalogTreeItem = {
 };
 
 const TreeContext = createContext<{
-  kidsOf: (id: number) => CatalogTreeItem[];
+  kidsOf: (id: number | null) => CatalogTreeItem[];
   visible: (id: number) => boolean;
   isOpen: (id: number) => boolean;
   toggle: (id: number) => void;
@@ -93,7 +93,7 @@ export function CatalogTree({
     return ids;
   }, [byParent, needle]);
 
-  function kidsOf(id: number) {
+  function kidsOf(id: number | null) {
     return byParent.get(id) ?? [];
   }
 

@@ -8,6 +8,8 @@
     "start": "next start",
     "deploy": "bash scripts/deploy.sh",
     "lint": "eslint",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/db/migrate.ts",
     "db:push": "drizzle-kit push --force",
     "db:setup": "drizzle-kit push --force && tsx src/db/setup.ts",
     "catalog:load": "tsx --env-file=.env src/db/load-boats.ts",
