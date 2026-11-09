@@ -1,63 +1,88 @@
 import Link from "next/link";
-import { asc } from "drizzle-orm";
-import { db } from "@/db";
-import { nomenclature } from "@/db/schema";
+import { bulkNomenclatureAction } from "@/actions/admin-bulk";
+import { AdminTable } from "@/components/admin-table";
 import { buttonClass, secondaryClass } from "@/components/styles";
-import { formatOffer } from "@/lib/format";
+import { adminHref, adminPageSize } from "@/lib/admin-list";
+import { listNomenclature, nomenclatureColumns } from "@/lib/admin-records";
+import { allCategories } from "@/lib/catalog";
 import { requireManager } from "@/lib/guards";
-import { availableOf } from "@/lib/stock";
+import { readQuery } from "@/lib/query";
+import { flattenCategories } from "@/lib/taxonomy";
 
 export const metadata = { title: "Номенклатура" };
 
-export default async function NomenclaturePage() {
+export default async function NomenclaturePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   await requireManager();
-  const rows = await db.query.nomenclature.findMany({
-    orderBy: asc(nomenclature.sku),
-    with: { category: true },
-  });
+  const { one } = await readQuery(searchParams);
+  const [list, categories] = await Promise.all([listNomenclature(one), allCategories()]);
   return (
     <main>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl">Номенклатура 1P</h1>
-        <div className="flex gap-2">
-          <Link href="/admin/nomenclature/import" className={secondaryClass}>
-            Загрузка CSV
-          </Link>
-          <Link href="/admin/nomenclature/new" className={buttonClass}>
-            Новая позиция
-          </Link>
-        </div>
-      </div>
-      <div className="mt-4 overflow-x-auto rounded-3xl border border-line bg-card">
-        <table className="w-full min-w-[720px] text-left text-sm">
-          <thead className="text-muted">
-            <tr>
-              <th className="px-4 py-3">Артикул</th>
-              <th className="px-4 py-3">Название</th>
-              <th className="px-4 py-3">Цена</th>
-              <th className="px-4 py-3">Склад</th>
-              <th className="px-4 py-3">Резерв</th>
-              <th className="px-4 py-3">Доступно</th>
-              <th className="px-4 py-3">Витрина</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.id} className="border-t border-line">
-                <td className="px-4 py-3">
-                  <Link href={`/admin/nomenclature/${row.id}`}>{row.sku}</Link>
-                </td>
-                <td className="px-4 py-3">{row.title}</td>
-                <td className="px-4 py-3">{formatOffer(row.priceKopeks)}</td>
-                <td className="px-4 py-3">{row.quantityOnHand}</td>
-                <td className="px-4 py-3">{row.quantityReserved}</td>
-                <td className="px-4 py-3">{availableOf(row)}</td>
-                <td className="px-4 py-3">{row.isPublished ? "Да" : "Нет"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <AdminTable
+        title="Номенклатура"
+        basePath="/admin/nomenclature"
+        exportHref={adminHref("/admin/export", {
+          entity: "nomenclature",
+          q: list.q,
+          sort: list.sort,
+          dir: list.dir,
+          published: list.filters.published,
+          category: list.filters.category,
+        })}
+        columns={nomenclatureColumns}
+        rows={list.rows}
+        filters={[
+          {
+            key: "category",
+            label: "Категория",
+            value: list.filters.category ?? "",
+            options: [
+              { value: "", label: "Все категории" },
+              ...flattenCategories(categories).map(({ category, depth }) => ({
+                value: String(category.id),
+                label: `${"— ".repeat(depth)}${category.name}`,
+              })),
+            ],
+          },
+          {
+            key: "published",
+            label: "Витрина",
+            value: list.filters.published ?? "",
+            options: [
+              { value: "", label: "Все" },
+              { value: "yes", label: "На витрине" },
+              { value: "no", label: "Скрытые" },
+            ],
+          },
+        ]}
+        bulk={[
+          { value: "publish", label: "Опубликовать" },
+          { value: "unpublish", label: "Снять с витрины" },
+        ]}
+        bulkAction={bulkNomenclatureAction}
+        q={list.q}
+        sort={list.sort}
+        dir={list.dir}
+        page={list.page}
+        pages={list.pages}
+        total={list.total}
+        pageSize={adminPageSize}
+        error={one("error")}
+        saved={one("saved")}
+        toolbar={
+          <>
+            <Link href="/admin/nomenclature/import" className={secondaryClass}>
+              Загрузка CSV
+            </Link>
+            <Link href="/admin/nomenclature/new" className={buttonClass}>
+              Новая позиция
+            </Link>
+          </>
+        }
+      />
     </main>
   );
 }

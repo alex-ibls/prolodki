@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import {
   attributeDefs,
@@ -14,7 +14,8 @@ import { ensureIndividualSeller } from "@/lib/seller";
 import type { CurrentUser } from "@/lib/session";
 import { slugify } from "@/lib/slug";
 import { assertLeafCategory, resolveBrandId } from "@/lib/taxonomy";
-import { assertPhotoRoom, photoFiles, saveListingImage } from "@/lib/uploads";
+import { releaseStoredPhoto } from "@/lib/photos";
+import { assertPhotoRoom, photoFiles, removedPhotoIds, saveListingImage } from "@/lib/uploads";
 
 export async function defsForCategory(categoryId: number) {
   return db
@@ -89,9 +90,11 @@ export async function saveSellerListing(user: CurrentUser, listingId: string | n
     throw new DomainError("Это объявление уже нельзя редактировать");
   }
 
+  const removeIds = new Set(removedPhotoIds(formData));
+  const kept = (existing?.images ?? []).filter((image) => !removeIds.has(image.id));
   const files = photoFiles(formData);
-  const photoCount = (existing?.images.length ?? 0) + files.length;
-  assertPhotoRoom(existing?.images.length ?? 0, files.length);
+  const photoCount = kept.length + files.length;
+  assertPhotoRoom(kept.length, files.length);
   const shouldReview = intent === "submit" || existing?.status === "published";
   if (shouldReview && !user.emailVerifiedAt) {
     throw new DomainError("Подтвердите email, чтобы разместить объявление");
@@ -142,7 +145,15 @@ export async function saveSellerListing(user: CurrentUser, listingId: string | n
     );
   }
 
-  let sort = existing?.images.length ?? 0;
+  const doomed = (existing?.images ?? []).filter((image) => removeIds.has(image.id));
+  if (doomed.length > 0) {
+    await db
+      .delete(listingImages)
+      .where(and(eq(listingImages.listingId, id!), inArray(listingImages.id, doomed.map((image) => image.id))));
+    for (const image of doomed) await releaseStoredPhoto(image.path);
+  }
+
+  let sort = kept.reduce((max, image) => Math.max(max, image.sort), -1) + 1;
   for (const file of files) {
     const stored = await saveListingImage(id!, file);
     if (!stored) continue;

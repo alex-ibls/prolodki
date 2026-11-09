@@ -122,15 +122,7 @@ export async function NomenclatureForm({ item, error }: { item?: Item; error?: s
         Описание
         <LimitedText name="description" defaultValue={item?.description} />
       </div>
-      {item?.images && item.images.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
-          {item.images.map((image) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={image.id} src={`/media/${image.path}`} alt="" className="h-20 w-20 rounded-xl object-cover" />
-          ))}
-        </div>
-      ) : null}
-      <PhotoField existing={item?.images?.length ?? 0} />
+      <PhotoField images={item?.images} />
       <label className="flex items-center gap-2 text-sm">
         <input name="publish" type="checkbox" defaultChecked={item?.isPublished ?? true} />
         Опубликовать на витрине

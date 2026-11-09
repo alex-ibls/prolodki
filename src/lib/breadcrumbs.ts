@@ -24,9 +24,10 @@ const labels: Record<string, string> = {
   deals: "Сделки",
 };
 
-export function crumbsForPath(pathname: string): Crumb[] {
+export function crumbsForPath(pathname: string, names: Record<string, string> = {}): Crumb[] {
   const segments = pathname.split("/").filter(Boolean);
   if (segments.length === 0) return [];
+  if (segments[0] === "catalog") return catalogCrumbs(segments, names);
   if (segments[0] === "product" && segments[1]) {
     return [
       { href: "/", label: "Главная" },
@@ -61,6 +62,27 @@ export function crumbsForPath(pathname: string): Crumb[] {
   return crumbs.length > 1 ? crumbs : [];
 }
 
+function catalogCrumbs(segments: string[], names: Record<string, string>): Crumb[] {
+  const crumbs: Crumb[] = [{ href: "/", label: "Главная" }];
+  const end = segments.indexOf("filter");
+  const slugs = segments.slice(1, end === -1 ? undefined : end).map(decodeSegment);
+  slugs.forEach((slug, index) => {
+    crumbs.push({
+      href: `/catalog/${slugs.slice(0, index + 1).join("/")}`,
+      label: names[slug] ?? "Раздел",
+    });
+  });
+  return crumbs;
+}
+
+function decodeSegment(segment: string) {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
+
 function segmentLabel(segment: string, parent: string | undefined, root: string) {
   if (uuid.test(segment)) {
     if (parent === "orders") return "Заказ";
@@ -69,7 +91,13 @@ function segmentLabel(segment: string, parent: string | undefined, root: string)
     if (parent === "nomenclature") return "Позиция";
     if (parent === "customers") return "Клиент";
     if (parent === "deals") return "Сделка";
+    if (parent === "moderation") return "Объявление";
     return "Страница";
+  }
+  if (/^\d+$/.test(segment)) {
+    if (parent === "catalog") return "Категория";
+    if (parent === "brands") return "Бренд";
+    return null;
   }
   if (segment === "new") {
     if (parent === "listings") return "Новое объявление";

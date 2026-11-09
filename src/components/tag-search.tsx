@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import {
   activeFilterChips,
@@ -10,13 +10,24 @@ import {
   type FilterField,
   type FilterSuggestion,
 } from "@/lib/catalog-tags";
+import { catalogHref, catalogParamsFromLocation } from "@/lib/sef";
 
 type Suggestion =
   | { kind: "tag"; id: string; label: string; detail: string; group: string; tag: CatalogTag }
   | { kind: "filter"; id: string; label: string; detail: string; group: string; filter: FilterSuggestion };
 
-export function TagSearch({ tags, filters }: { tags: CatalogTag[]; filters: FilterField[] }) {
+export function TagSearch({
+  tags,
+  filters,
+  paths,
+}: {
+  tags: CatalogTag[];
+  filters: FilterField[];
+  paths: Record<string, string>;
+}) {
+  const pathname = usePathname();
   const params = useSearchParams();
+  const current = catalogParamsFromLocation(pathname, params);
   const router = useRouter();
   const listId = useId();
   const box = useRef<HTMLDivElement>(null);
@@ -25,8 +36,8 @@ export function TagSearch({ tags, filters }: { tags: CatalogTag[]; filters: Filt
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
 
-  const selected = tags.filter((tag) => params.get(tag.param) === tag.value);
-  const chips = activeFilterChips(filters, params);
+  const selected = tags.filter((tag) => current.get(tag.param) === tag.value);
+  const chips = activeFilterChips(filters, current);
   const taken = useMemo(() => new Set(selected.map((tag) => tag.id)), [selected]);
   const suggestions = useMemo<Suggestion[]>(() => {
     const filtersMatched = matchFilters(filters, draft).map((filter) => ({
@@ -47,7 +58,7 @@ export function TagSearch({ tags, filters }: { tags: CatalogTag[]; filters: Filt
     }));
     return [...filtersMatched, ...tagsMatched].slice(0, 8);
   }, [filters, tags, draft, taken]);
-  const query = params.get("q") ?? "";
+  const query = current.get("q") ?? "";
   const canSearch = draft.trim().length > 0;
   const optionCount = suggestions.length + (canSearch ? 1 : 0);
 
@@ -60,14 +71,13 @@ export function TagSearch({ tags, filters }: { tags: CatalogTag[]; filters: Filt
   }, []);
 
   function go(changes: Record<string, string | null>) {
-    const next = new URLSearchParams(params.toString());
+    const next = catalogParamsFromLocation(pathname, params);
     next.delete("page");
     for (const [key, value] of Object.entries(changes)) {
       if (!value) next.delete(key);
       else next.set(key, value);
     }
-    const text = next.toString();
-    router.push(text ? `/?${text}` : "/");
+    router.push(catalogHref(next, paths));
   }
 
   function choose(item: Suggestion) {
@@ -135,14 +145,14 @@ export function TagSearch({ tags, filters }: { tags: CatalogTag[]; filters: Filt
   return (
     <div ref={box} className="relative min-w-0 flex-1 lg:min-w-56">
       <div
-        className="field flex min-h-10 flex-wrap items-center gap-1 border border-line bg-paper px-2 py-1 focus-within:border-navy"
+        className="field search flex min-h-10 flex-wrap items-center gap-1 border border-white/70 bg-white px-4 py-1 focus-within:border-copper"
         onClick={() => field.current?.focus()}
       >
         {selected.map((tag) => (
           <button
             key={tag.id}
             type="button"
-            className="tag bg-white px-2 py-0.5 text-sm text-navy"
+            className="tag bg-foam px-2 py-0.5 text-sm font-medium text-deep"
             onClick={(event) => {
               event.stopPropagation();
               remove(tag);
@@ -155,7 +165,7 @@ export function TagSearch({ tags, filters }: { tags: CatalogTag[]; filters: Filt
           <button
             key={chip.id}
             type="button"
-            className="tag bg-white px-2 py-0.5 text-sm text-navy"
+            className="tag bg-foam px-2 py-0.5 text-sm font-medium text-deep"
             onClick={(event) => {
               event.stopPropagation();
               go(chip.clear);
@@ -167,7 +177,7 @@ export function TagSearch({ tags, filters }: { tags: CatalogTag[]; filters: Filt
         {query ? (
           <button
             type="button"
-            className="tag bg-white px-2 py-0.5 text-sm text-navy"
+            className="tag bg-foam px-2 py-0.5 text-sm font-medium text-deep"
             onClick={(event) => {
               event.stopPropagation();
               go({ q: null });
@@ -199,7 +209,7 @@ export function TagSearch({ tags, filters }: { tags: CatalogTag[]; filters: Filt
         <ul
           id={listId}
           role="listbox"
-          className="absolute left-0 right-0 top-full z-50 mt-2 max-h-[min(20rem,50vh)] overflow-auto rounded-2xl border border-line bg-white py-1 shadow-xl"
+          className="absolute left-0 right-0 top-full z-50 mt-2 max-h-[min(20rem,50vh)] overflow-auto rounded-2xl border border-line bg-white py-1"
         >
           {suggestions.map((item, index) => (
             <li key={item.id} role="option" aria-selected={index === active}>

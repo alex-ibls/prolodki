@@ -15,8 +15,8 @@ async function AdminFrame({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
   if (!user?.staffRole) redirect("/login?next=/admin/crm");
   return (
-    <div className="mx-auto max-w-5xl px-4 py-4 sm:py-8">
-      <nav className="-mx-4 mb-6 flex gap-4 overflow-x-auto px-4 text-sm sm:mx-0 sm:flex-wrap sm:px-0">
+    <div className="mx-auto max-w-7xl px-3 py-4 sm:px-4 sm:py-8">
+      <nav className="-mx-4 mb-6 flex gap-4 overflow-x-auto px-4 text-sm font-semibold text-navy sm:mx-0 sm:flex-wrap sm:px-0">
         {user.staffRole === "manager" ? <Link href="/admin/crm" className="shrink-0">Клиенты</Link> : null}
         {user.staffRole === "manager" ? <Link href="/admin/crm/deals" className="shrink-0">Сделки</Link> : null}
         {user.staffRole === "manager" ? <Link href="/admin/catalog" className="shrink-0">Каталог</Link> : null}

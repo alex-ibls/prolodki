@@ -1,14 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --paper: #f7f7f7;
-  --ink: #1c3d5a;
-  --navy: #1f6cb5;
-  --copper: #2a7ad4;
-  --line: #d5e6f4;
+  --paper: #e5f3fb;
+  --ink: #072033;
+  --navy: #0b6ec8;
+  --deep: #042844;
+  --copper: #f06a00;
+  --line: #b5d4ea;
   --card: #ffffff;
-  --moss: #2a8a72;
-  --muted: #5c7690;
+  --foam: #d5efff;
+  --moss: #0b8f68;
+  --muted: #3e6484;
   --radius-xs: 0.0625rem;
   --radius-sm: 0.125rem;
   --radius-md: 0.1875rem;
@@ -24,9 +26,11 @@
   --color-paper: var(--paper);
   --color-ink: var(--ink);
   --color-navy: var(--navy);
+  --color-deep: var(--deep);
   --color-copper: var(--copper);
   --color-line: var(--line);
   --color-card: var(--card);
+  --color-foam: var(--foam);
   --color-moss: var(--moss);
   --color-muted: var(--muted);
   --font-sans: var(--font-inter);
@@ -47,15 +51,32 @@
 }
 
 .tag,
-.field,
-.btn {
+.btn,
+select.field,
+input.field[type="file"] {
+  border-radius: 9999px;
+}
+
+input.field:is([type="text"], [type="email"], [type="password"], [type="search"], [type="tel"], [type="url"], [type="number"], :not([type])),
+textarea.field,
+div.field {
+  border-radius: 6px;
+}
+
+div.field.search,
+input.field.search {
   border-radius: 9999px;
 }
 
 body {
-  background: #fff;
+  background: var(--paper);
   color: var(--ink);
   font-family: var(--font-inter), sans-serif;
+}
+
+::selection {
+  background-color: #b7e6ff;
+  color: var(--deep);
 }
 
 h1,

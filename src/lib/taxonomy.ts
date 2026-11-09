@@ -11,6 +11,10 @@ export type CategoryNode = {
   sort: number;
 };
 
+export function withoutDemo<T extends { slug: string }>(rows: T[]) {
+  return rows.filter((row) => !row.slug.startsWith("demo-"));
+}
+
 export function childrenOf(all: CategoryNode[], parentId: number | null) {
   return all
     .filter((item) => item.parentId === parentId)

@@ -79,7 +79,7 @@ export function UserMenu({
     <div ref={root} className="relative shrink-0">
       <button
         type="button"
-        className="btn relative flex h-11 w-11 items-center justify-center border border-line text-navy"
+        className="btn relative flex h-11 w-11 items-center justify-center border border-white/40 text-white"
         aria-expanded={open}
         aria-controls={panelId}
         aria-label={open ? "Закрыть меню" : "Меню"}
@@ -104,7 +104,7 @@ export function UserMenu({
         <nav
           id={panelId}
           aria-label="Меню"
-          className="absolute right-0 top-full z-50 mt-2 max-h-[min(24rem,70vh)] w-60 overflow-auto rounded-2xl border border-line bg-white py-2 shadow-xl"
+          className="absolute right-0 top-full z-50 mt-2 max-h-[min(24rem,70vh)] w-60 overflow-auto rounded-2xl border border-line bg-white py-2"
         >
           <MenuLinks items={buyer} pathname={pathname} />
           <div className="my-1 border-t border-line" role="separator" />

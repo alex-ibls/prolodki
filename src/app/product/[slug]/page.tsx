@@ -16,6 +16,7 @@ import { formatOffer, formatRub } from "@/lib/format";
 import { conditionLabel, sourceLabel } from "@/lib/labels";
 import { buyerThreadForListing, isListingSeller } from "@/lib/messages";
 import { readQuery } from "@/lib/query";
+import { catalogHref, categoryPathMap } from "@/lib/sef";
 import { getCurrentUser } from "@/lib/session";
 
 export default async function ProductPage({
@@ -37,19 +38,21 @@ export default async function ProductPage({
   const hasPhone = Boolean(item.seller?.phone?.trim() || item.organization?.phone?.trim());
   const sellerHere = isListingSeller(user ?? null, item);
   const thread = sellerHere ? null : await buyerThreadForListing(item.id);
-  const path = categoryPath(await allCategories(), item.categoryId);
+  const categories = await allCategories();
+  const path = categoryPath(categories, item.categoryId);
+  const categoryHref = item.category?.slug ? catalogHref(new URLSearchParams({ category: item.category.slug }), categoryPathMap(categories)) : "/";
   return (
     <main className="mx-auto grid max-w-6xl gap-4 px-3 py-3 sm:px-4 sm:py-8 lg:grid-cols-2 lg:gap-6">
       <CrumbTitle label={item.title} />
       <ProductGallery title={item.title} images={item.images} />
       <div>
-        <p className="text-[1.75rem] font-bold leading-tight text-[#141414]">{formatOffer(item.priceKopeks)}</p>
+        <p className="font-display text-[1.75rem] font-extrabold leading-tight text-deep">{formatOffer(item.priceKopeks)}</p>
         {item.compareAtKopeks && item.priceKopeks > 0 && item.compareAtKopeks > item.priceKopeks ? (
           <p className="text-sm text-[#757575] line-through">{formatRub(item.compareAtKopeks)}</p>
         ) : null}
         <h1 className="mt-1 text-xl leading-6 sm:text-2xl">{item.title}</h1>
         <p className="mt-2 text-sm text-muted">
-          <Link href={item.category?.slug ? `/?category=${item.category.slug}` : "/"} className="hover:text-copper">
+          <Link href={categoryHref} className="hover:text-copper">
             {path}
           </Link>
           {" · "}

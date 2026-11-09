@@ -25,10 +25,10 @@ export function CrumbTitle({ label }: { label: string }) {
   return null;
 }
 
-export function BreadcrumbBar() {
+export function BreadcrumbBar({ names = {} }: { names?: Record<string, string> }) {
   const pathname = usePathname();
   const title = useContext(CrumbTitleContext)?.title ?? null;
-  const crumbs = crumbsForPath(pathname);
+  const crumbs = crumbsForPath(pathname, names);
   if (crumbs.length < 2) return null;
   if (title) crumbs[crumbs.length - 1] = { ...crumbs[crumbs.length - 1], label: title };
   return (

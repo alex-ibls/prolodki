@@ -1,11 +1,12 @@
-import { asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { listingImages, listings, nomenclatureImages } from "@/db/schema";
 import { DomainError } from "@/lib/errors";
 import { preparePlatformPhoto } from "@/lib/prepare-photo";
-import { assertPhotoRoom, deleteStored, maxPhotos, photoFiles, savePhoto, savePhotoBytes } from "@/lib/uploads";
+import { assertPhotoRoom, deleteStored, maxPhotos, photoFiles, removedPhotoIds, savePhoto, savePhotoBytes } from "@/lib/uploads";
 
 export async function attachNomenclaturePhotos(nomenclatureId: string, formData: FormData) {
+  const removed = await takeNomenclaturePhotos(nomenclatureId, removedPhotoIds(formData));
   const files = photoFiles(formData);
   if (files.length > 0) {
     const current = await db
@@ -28,6 +29,40 @@ export async function attachNomenclaturePhotos(nomenclatureId: string, formData:
     }
   }
   await mirrorNomenclaturePhotos(nomenclatureId);
+  for (const path of removed) await releaseStoredPhoto(path);
+}
+
+async function takeNomenclaturePhotos(nomenclatureId: string, ids: string[]) {
+  if (ids.length === 0) return [];
+  const rows = await db
+    .select()
+    .from(nomenclatureImages)
+    .where(and(eq(nomenclatureImages.nomenclatureId, nomenclatureId), inArray(nomenclatureImages.id, ids)));
+  if (rows.length === 0) return [];
+  await db
+    .delete(nomenclatureImages)
+    .where(and(eq(nomenclatureImages.nomenclatureId, nomenclatureId), inArray(nomenclatureImages.id, rows.map((row) => row.id))));
+  return rows.map((row) => row.path);
+}
+
+export async function releaseStoredPhoto(path: string) {
+  const [nomenclature] = await db
+    .select({ id: nomenclatureImages.id })
+    .from(nomenclatureImages)
+    .where(eq(nomenclatureImages.path, path))
+    .limit(1);
+  if (nomenclature) return;
+  const [listing] = await db
+    .select({ id: listingImages.id })
+    .from(listingImages)
+    .where(eq(listingImages.path, path))
+    .limit(1);
+  if (listing) return;
+  try {
+    await deleteStored(path);
+  } catch {
+    // Файла в хранилище уже нет.
+  }
 }
 
 export async function replaceNomenclaturePhotos(nomenclatureId: string, files: Buffer[]) {

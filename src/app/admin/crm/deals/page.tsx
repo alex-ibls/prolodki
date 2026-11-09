@@ -1,16 +1,12 @@
-import Link from "next/link";
-import { desc, eq } from "drizzle-orm";
-import { db } from "@/db";
-import { deals } from "@/db/schema";
-import { inputClass } from "@/components/styles";
-import { formatRub } from "@/lib/format";
-import { dealStatusLabel } from "@/lib/labels";
+import { bulkDealsAction } from "@/actions/admin-bulk";
+import { AdminTable } from "@/components/admin-table";
+import { adminHref, adminPageSize } from "@/lib/admin-list";
+import { dealColumns, listDeals } from "@/lib/admin-records";
 import { requireManager } from "@/lib/guards";
+import { dealStatusLabel } from "@/lib/labels";
 import { readQuery } from "@/lib/query";
 
 export const metadata = { title: "Сделки" };
-
-const statuses = ["", "new", "in_progress", "invoiced", "won", "lost"] as const;
 
 export default async function DealsPage({
   searchParams,
@@ -19,34 +15,38 @@ export default async function DealsPage({
 }) {
   await requireManager();
   const { one } = await readQuery(searchParams);
-  const status = one("status");
-  const rows = await db.query.deals.findMany({
-    where: status ? eq(deals.status, status as "new") : undefined,
-    with: { customer: true },
-    orderBy: desc(deals.updatedAt),
-  });
+  const list = await listDeals(one);
   return (
     <main>
-      <h1 className="text-3xl">Сделки</h1>
-      <form className="mt-4 flex gap-2">
-        <select name="status" defaultValue={status} className={inputClass}>
-          {statuses.map((item) => (
-            <option key={item || "all"} value={item}>
-              {item ? dealStatusLabel[item] : "Все статусы"}
-            </option>
-          ))}
-        </select>
-        <button className="btn bg-navy px-4 text-sm text-white">Фильтр</button>
-      </form>
-      <ul className="mt-4 space-y-2">
-        {rows.map((deal) => (
-          <li key={deal.id}>
-            <Link href={`/admin/crm/deals/${deal.id}`} className="block rounded-2xl border border-line bg-card px-4 py-3">
-              {deal.title} · {deal.customer?.name} · {dealStatusLabel[deal.status]} · {formatRub(deal.amountKopeks)}
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <AdminTable
+        title="Сделки"
+        basePath="/admin/crm/deals"
+        exportHref={adminHref("/admin/export", { entity: "deals", q: list.q, sort: list.sort, dir: list.dir, status: list.filters.status })}
+        columns={dealColumns}
+        rows={list.rows}
+        filters={[
+          {
+            key: "status",
+            label: "Статус",
+            value: list.filters.status ?? "",
+            options: [
+              { value: "", label: "Все статусы" },
+              ...Object.entries(dealStatusLabel).map(([value, label]) => ({ value, label })),
+            ],
+          },
+        ]}
+        bulk={Object.entries(dealStatusLabel).map(([value, label]) => ({ value, label: `Статус: ${label}` }))}
+        bulkAction={bulkDealsAction}
+        q={list.q}
+        sort={list.sort}
+        dir={list.dir}
+        page={list.page}
+        pages={list.pages}
+        total={list.total}
+        pageSize={adminPageSize}
+        error={one("error")}
+        saved={one("saved")}
+      />
     </main>
   );
 }

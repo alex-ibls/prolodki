@@ -1,5 +1,8 @@
 export const site = {
-  name: "Пролодки",
+  name: "По Волнам",
+  domain: "По-волнам.рф",
+  url: "https://xn----8sbf0bgedcf.xn--p1ai",
+  tagline: "Лодки, катера и яхты",
   phone: "+7 (495) 120-40-40",
   phoneHref: "+74951204040",
   email: "hello@prolodki.test",

@@ -5,7 +5,7 @@ import { PhotoField } from "@/components/photo-field";
 import { buttonClass, inputClass, secondaryClass } from "@/components/styles";
 import { allCategories } from "@/lib/catalog";
 import { defsForCategory } from "@/lib/listings";
-import { allBrands, categoryPath, isLeaf } from "@/lib/taxonomy";
+import { allBrands, categoryPath, isLeaf, withoutDemo } from "@/lib/taxonomy";
 
 type ListingShape = {
   id: string;
@@ -22,7 +22,7 @@ type ListingShape = {
   onOrder: boolean;
   quantity: number;
   status: string;
-  images?: { id: string }[];
+  images?: { id: string; path: string }[];
   attributes?: { attributeDefId: number; valueNumber: number | null; valueText?: string | null; definition?: { code: string } }[];
 };
 
@@ -33,8 +33,8 @@ export async function SellerForm({
   listing?: ListingShape;
   error?: string;
 }) {
-  const categories = await allCategories();
-  const brands = await allBrands();
+  const categories = withoutDemo(await allCategories());
+  const brands = withoutDemo(await allBrands());
   const leaves = categories
     .filter((category) => isLeaf(categories, category.id))
     .sort((a, b) => categoryPath(categories, a.id).localeCompare(categoryPath(categories, b.id), "ru"));
@@ -117,7 +117,7 @@ export async function SellerForm({
         Описание
         <LimitedText name="description" defaultValue={listing?.description} />
       </div>
-      <PhotoField existing={listing?.images?.length ?? 0} disabled={locked} />
+      <PhotoField images={listing?.images} disabled={locked} />
       {locked ? null : (
         <div className="flex gap-2">
           <button name="intent" value="draft" className={secondaryClass}>

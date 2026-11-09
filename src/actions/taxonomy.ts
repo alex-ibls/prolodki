@@ -3,7 +3,8 @@
 import { eq, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { attributeDefs, brands, categories, listings, nomenclature } from "@/db/schema";
+import { brands, categories, listings, nomenclature } from "@/db/schema";
+import { removeBrand, removeCategory } from "@/lib/admin-mutations";
 import { allCategories } from "@/lib/catalog";
 import { DomainError } from "@/lib/errors";
 import { parseIntStrict } from "@/lib/format";
@@ -12,11 +13,35 @@ import { slugify } from "@/lib/slug";
 import { wouldCycle } from "@/lib/taxonomy";
 
 function readSort(formData: FormData) {
-  const raw = String(formData.get("sort") || "").trim();
-  if (!raw) return 0;
-  const sort = parseIntStrict(raw);
+  return parseSort(String(formData.get("sort") || ""));
+}
+
+function parseSort(raw: string) {
+  const text = raw.trim();
+  if (!text) return 0;
+  const sort = parseIntStrict(text);
   if (sort === null) throw new DomainError("Порядок должен быть целым числом");
   return sort;
+}
+
+function catalogBack(raw: unknown) {
+  const fallback = "/admin/catalog";
+  const value = String(raw || "");
+  if (value.startsWith("//") || value.includes("\n") || value.includes("\\")) return fallback;
+  const [path, query = ""] = value.split("?");
+  if (path !== fallback) return fallback;
+  const params = new URLSearchParams(query);
+  params.delete("saved");
+  params.delete("error");
+  const next = params.toString();
+  return next ? `${path}?${next}` : path;
+}
+
+function withSaved(path: string) {
+  const [base, query = ""] = path.split("?");
+  const params = new URLSearchParams(query);
+  params.set("saved", "1");
+  return `${base}?${params}`;
 }
 
 async function freshSlug(table: "categories" | "brands", name: string) {
@@ -53,40 +78,51 @@ export async function saveCategoryAction(formData: FormData) {
       if (!current) throw new DomainError("Категория не найдена");
       if (wouldCycle(all, id, parentId)) throw new DomainError("Категория не может быть внутри самой себя");
       await db.update(categories).set({ name, sort, parentId }).where(eq(categories.id, id));
-    } else {
-      await db.insert(categories).values({
-        name,
-        sort,
-        parentId,
-        slug: await freshSlug("categories", name),
-      });
+      redirect(`/admin/catalog/${id}?saved=1`);
     }
+    await db.insert(categories).values({
+      name,
+      sort,
+      parentId,
+      slug: await freshSlug("categories", name),
+    });
     redirect("/admin/catalog?saved=1");
   });
 }
 
+export async function saveCatalogRowsAction(formData: FormData) {
+  const back = catalogBack(formData.get("back"));
+  await runAction(back, async (user) => {
+    if (user.staffRole !== "manager") throw new DomainError("Каталог доступен менеджеру");
+    const ids = formData.getAll("rowId").map(String);
+    const names = formData.getAll("name").map(String);
+    const sorts = formData.getAll("sort").map(String);
+    if (ids.length === 0 || ids.length !== names.length || ids.length !== sorts.length) {
+      throw new DomainError("Не удалось прочитать каталог");
+    }
+    if (ids.length > 500) throw new DomainError("Слишком много разделов");
+    const all = await allCategories();
+    const byId = new Map(all.map((item) => [String(item.id), item]));
+    for (let index = 0; index < ids.length; index += 1) {
+      const current = byId.get(ids[index]);
+      if (!current) throw new DomainError("Категория не найдена");
+      const name = names[index].trim();
+      if (name.length < 2) throw new DomainError(`Укажите название: ${current.name}`);
+      const sort = parseSort(sorts[index]);
+      if (name === current.name && sort === current.sort) continue;
+      await db.update(categories).set({ name, sort }).where(eq(categories.id, current.id));
+    }
+    redirect(withSaved(back));
+  });
+}
+
 export async function deleteCategoryAction(formData: FormData) {
-  await runAction("/admin/catalog", async (user) => {
+  const back = catalogBack(formData.get("back"));
+  await runAction(back, async (user) => {
     if (user.staffRole !== "manager") throw new DomainError("Каталог доступен менеджеру");
     const id = Number(formData.get("id") || "");
-    const category = await db.query.categories.findFirst({ where: eq(categories.id, id) });
-    if (!category) throw new DomainError("Категория не найдена");
-    const child = await db.query.categories.findFirst({ where: eq(categories.parentId, id) });
-    if (child) throw new DomainError("Сначала уберите вложенные категории");
-    const listing = await db.query.listings.findFirst({ where: eq(listings.categoryId, id) });
-    if (listing) throw new DomainError("В категории есть объявления");
-    const good = await db.query.nomenclature.findFirst({ where: eq(nomenclature.categoryId, id) });
-    if (good) throw new DomainError("В категории есть номенклатура");
-    await db.execute(sql`
-      delete from attribute_defs d
-      where d.category_id = ${id}
-        and not exists (select 1 from listing_attributes la where la.attribute_def_id = d.id)
-        and not exists (select 1 from nomenclature_attributes na where na.attribute_def_id = d.id)
-    `);
-    const still = await db.query.attributeDefs.findFirst({ where: eq(attributeDefs.categoryId, id) });
-    if (still) throw new DomainError("У категории остались характеристики");
-    await db.delete(categories).where(eq(categories.id, id));
-    redirect("/admin/catalog?saved=1");
+    await removeCategory(id);
+    redirect(withSaved(back));
   });
 }
 
@@ -108,10 +144,10 @@ export async function saveBrandAction(formData: FormData) {
       await db.update(brands).set({ name, sort }).where(eq(brands.id, id));
       await db.update(listings).set({ brand: name }).where(eq(listings.brandId, id));
       await db.update(nomenclature).set({ brand: name }).where(eq(nomenclature.brandId, id));
-    } else {
-      if (duplicate) throw new DomainError("Такой бренд уже есть");
-      await db.insert(brands).values({ name, sort, slug: await freshSlug("brands", name) });
+      redirect(`/admin/brands/${id}?saved=1`);
     }
+    if (duplicate) throw new DomainError("Такой бренд уже есть");
+    await db.insert(brands).values({ name, sort, slug: await freshSlug("brands", name) });
     redirect("/admin/brands?saved=1");
   });
 }
@@ -120,13 +156,7 @@ export async function deleteBrandAction(formData: FormData) {
   await runAction("/admin/brands", async (user) => {
     if (user.staffRole !== "manager") throw new DomainError("Бренды доступны менеджеру");
     const id = Number(formData.get("id") || "");
-    const brand = await db.query.brands.findFirst({ where: eq(brands.id, id) });
-    if (!brand) throw new DomainError("Бренд не найден");
-    const listing = await db.query.listings.findFirst({ where: eq(listings.brandId, id) });
-    if (listing) throw new DomainError("Бренд указан в объявлениях");
-    const good = await db.query.nomenclature.findFirst({ where: eq(nomenclature.brandId, id) });
-    if (good) throw new DomainError("Бренд указан в номенклатуре");
-    await db.delete(brands).where(eq(brands.id, id));
+    await removeBrand(id);
     redirect("/admin/brands?saved=1");
   });
 }

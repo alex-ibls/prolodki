@@ -8,7 +8,7 @@ import {
   listings,
 } from "@/db/schema";
 import type { CatalogTag, FilterField } from "@/lib/catalog-tags";
-import { categoryPath } from "@/lib/taxonomy";
+import { categoryPath, withoutDemo } from "@/lib/taxonomy";
 
 export type CatalogQuery = {
   q?: string;
@@ -21,7 +21,7 @@ export type CatalogQuery = {
   availability?: string;
   priceMin?: string;
   priceMax?: string;
-  sort?: string;
+  priceSort?: "asc" | "desc";
   page?: string;
   attrs?: Record<string, { min?: string; max?: string }>;
 };
@@ -57,8 +57,8 @@ export async function catalogFilters(): Promise<FilterField[]> {
 }
 
 export async function catalogTags(): Promise<CatalogTag[]> {
-  const categoryRows = await allCategories();
-  const brandRows = await db.select().from(brands).orderBy(asc(brands.sort), asc(brands.name));
+  const categoryRows = withoutDemo(await allCategories());
+  const brandRows = withoutDemo(await db.select().from(brands).orderBy(asc(brands.sort), asc(brands.name)));
   const cityRows = await db
     .selectDistinct({ city: listings.city })
     .from(listings)
@@ -126,6 +126,14 @@ export function subtreeIds(
   return ids;
 }
 
+function priceSortOf(params: URLSearchParams): "asc" | "desc" | undefined {
+  const price = params.get("price");
+  if (price === "asc" || price === "desc") return price;
+  if (params.get("sort") === "price_asc") return "asc";
+  if (params.get("sort") === "price_desc") return "desc";
+  return undefined;
+}
+
 export function catalogQueryFromSearchParams(params: URLSearchParams): CatalogQuery {
   const attrs: NonNullable<CatalogQuery["attrs"]> = {};
   for (const [key, value] of params.entries()) {
@@ -145,14 +153,14 @@ export function catalogQueryFromSearchParams(params: URLSearchParams): CatalogQu
     availability: params.get("availability") || undefined,
     priceMin: params.get("price_min") || undefined,
     priceMax: params.get("price_max") || undefined,
-    sort: params.get("sort") || "new",
+    priceSort: priceSortOf(params),
     page: params.get("page") || undefined,
     attrs,
   };
 }
 
 export async function searchCatalog(query: CatalogQuery) {
-  const categoryRows = await allCategories();
+  const categoryRows = withoutDemo(await allCategories());
   const conditions: SQL[] = [eq(listings.status, "published")];
 
   if (query.category) {
@@ -244,14 +252,11 @@ export async function searchCatalog(query: CatalogQuery) {
 
   const where = and(...conditions);
   const page = Math.max(1, Number(query.page) || 1);
-  const order =
-    query.sort === "price_asc"
-      ? asc(listings.priceKopeks)
-      : query.sort === "price_desc"
-        ? desc(listings.priceKopeks)
-        : query.sort === "old"
-          ? asc(listings.createdAt)
-          : desc(listings.createdAt);
+  const order = [];
+  if (query.priceSort === "asc") order.push(asc(listings.priceKopeks));
+  if (query.priceSort === "desc") order.push(desc(listings.priceKopeks));
+  order.push(desc(listings.createdAt));
+  order.push(asc(listings.id));
 
   const [totalRow] = await db
     .select({ count: sql<number>`count(*)::int` })

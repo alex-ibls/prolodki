@@ -6,11 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "deploy": "bash scripts/deploy.sh",
     "lint": "eslint",
     "db:push": "drizzle-kit push --force",
     "db:setup": "drizzle-kit push --force && tsx src/db/setup.ts",
     "catalog:load": "tsx --env-file=.env src/db/load-boats.ts",
-    "catalog:multiply": "tsx --env-file=.env src/db/multiply-catalog.ts"
+    "catalog:multiply": "tsx --env-file=.env src/db/multiply-catalog.ts",
+    "admin:demo": "tsx --env-file=.env src/db/seed-admin-demo.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1156.0",

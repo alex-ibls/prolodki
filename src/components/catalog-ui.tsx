@@ -150,17 +150,16 @@ export function ProductCard({ item }: { item: CardData }) {
   const place = item.condition === "used" && item.source === "individual" ? item.city.trim() : "";
   const when = item.createdAt ? formatCardWhen(item.createdAt) : "";
   const meta = [place, when].filter(Boolean).join(" · ");
-  const phone = companyPhone(item);
   return (
     <article className="min-w-0">
       <Link href={`/product/${item.slug}`} className="block">
-        <span className="relative block overflow-hidden rounded-[16px] bg-[#ececec]">
+        <span className="relative block overflow-hidden rounded-[16px] bg-foam">
           {photo ? (
             // Local uploads are served by the app route and are not part of the image optimizer.
             // eslint-disable-next-line @next/next/no-img-element
             <img src={`/media/${photo}`} alt="" className="aspect-square w-full object-cover" />
           ) : (
-            <span className="flex aspect-square items-end bg-navy p-3 text-sm text-white">{item.category?.name}</span>
+            <span className="flex aspect-square items-end bg-navy p-3 text-sm font-semibold text-white">{item.category?.name}</span>
           )}
           {item.condition === "used" ? (
             <span className="absolute bottom-2 left-2 rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] font-medium text-white">
@@ -170,20 +169,15 @@ export function ProductCard({ item }: { item: CardData }) {
         </span>
         <span className="mt-1.5 block">
           <span className="flex flex-wrap items-baseline gap-x-1.5">
-            <span className="text-[15px] font-bold leading-5 text-[#141414]">{formatOffer(item.priceKopeks)}</span>
+            <span className="text-[15px] font-bold leading-5 text-deep">{formatOffer(item.priceKopeks)}</span>
             {item.compareAtKopeks && item.compareAtKopeks > item.priceKopeks ? (
               <span className="text-xs text-[#757575] line-through">{formatRub(item.compareAtKopeks)}</span>
             ) : null}
           </span>
-          <span className="mt-0.5 line-clamp-2 text-[13px] leading-4 text-[#141414]">{item.title}</span>
+          <span className="mt-0.5 line-clamp-2 text-[13px] leading-4 text-ink">{item.title}</span>
           {meta ? <span className="mt-1 block truncate text-xs leading-4 text-[#757575]">{meta}</span> : null}
         </span>
       </Link>
-      {phone ? (
-        <a href={telHref(phone)} className="mt-1 block text-[13px] font-semibold leading-4 text-navy">
-          {phone}
-        </a>
-      ) : null}
     </article>
   );
 }
@@ -213,7 +207,6 @@ export function listingCard(item: CardData): CardData {
     })),
     category: item.category ? { name: item.category.name } : null,
     createdAt: item.createdAt,
-    phone: companyPhone(item),
   };
 }
 

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { brandBarClass } from "@/components/styles";
 
 const items = [
   { href: "/history", label: "История", icon: "clock" },
@@ -22,7 +23,7 @@ export function MobileNav({
   return (
     <nav
       aria-label="Разделы"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white pb-[env(safe-area-inset-bottom)] lg:hidden"
+      className={`${brandBarClass} fixed inset-x-0 bottom-0 z-40 border-t border-white/15 pb-[env(safe-area-inset-bottom)] lg:hidden`}
     >
       <ul className="grid grid-cols-5">
         {items.map((item) => {
@@ -40,7 +41,7 @@ export function MobileNav({
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className={`flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 text-[10px] leading-none ${active ? "font-semibold text-navy" : "text-muted"}`}
+                className={`flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 text-[10px] leading-none ${active ? "font-semibold text-white" : "text-white/65"}`}
               >
                 <span className="relative">
                   <NavIcon name={item.icon} />

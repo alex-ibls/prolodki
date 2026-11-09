@@ -118,6 +118,10 @@ export function photoFiles(formData: FormData) {
   return files;
 }
 
+export function removedPhotoIds(formData: FormData) {
+  return [...new Set(formData.getAll("removePhoto").map((value) => String(value).trim()).filter(Boolean))];
+}
+
 export function assertPhotoRoom(existing: number, incoming: number) {
   if (existing + incoming <= maxPhotos) return;
   const room = Math.max(0, maxPhotos - existing);

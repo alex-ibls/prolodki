@@ -37,14 +37,6 @@ export default async function EditListingPage({
         Просмотры {stat?.view ?? 0} · в избранном {stat?.favorite ?? 0} · в корзину {stat?.cart_add ?? 0} · телефон{" "}
         {stat?.phone_reveal ?? 0}
       </p>
-      {listing.images.length > 0 ? (
-        <div className="flex gap-2">
-          {listing.images.map((image) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={image.id} src={`/media/${image.path}`} alt="" className="h-20 w-20 rounded-xl object-cover" />
-          ))}
-        </div>
-      ) : null}
       <SellerForm listing={listing} error={one("error")} />
     </main>
   );

@@ -1,40 +1,56 @@
-import Link from "next/link";
-import { desc, eq } from "drizzle-orm";
-import { db } from "@/db";
-import { orderItems } from "@/db/schema";
-import { formatRub, orderCode } from "@/lib/format";
-import { lineStatusLabel } from "@/lib/labels";
+import { bulkOrdersAction } from "@/actions/admin-bulk";
+import { AdminTable } from "@/components/admin-table";
+import { adminHref, adminPageSize } from "@/lib/admin-list";
+import { listOrders, orderColumns } from "@/lib/admin-records";
 import { requireManager } from "@/lib/guards";
-import { companyOrg } from "@/lib/stock";
+import { lineStatusLabel } from "@/lib/labels";
+import { readQuery } from "@/lib/query";
 
 export const metadata = { title: "Заказы компании" };
 
-export default async function CompanyOrdersPage() {
+export default async function CompanyOrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   await requireManager();
-  const org = await companyOrg();
-  const rows = await db.query.orderItems.findMany({
-    where: eq(orderItems.organizationId, org.id),
-    with: { order: true },
-    orderBy: desc(orderItems.id),
-  });
-  const seen = new Set<string>();
+  const { one } = await readQuery(searchParams);
+  const list = await listOrders(one);
   return (
     <main>
-      <h1 className="text-3xl">Заказы компании</h1>
-      <ul className="mt-4 space-y-3">
-        {rows.map((row) => {
-          if (!row.order || seen.has(row.order.id)) return null;
-          seen.add(row.order.id);
-          return (
-            <li key={row.order.id}>
-              <Link href={`/account/orders/${row.order.id}`} className="block rounded-3xl border border-line bg-card p-4">
-                {orderCode(row.order.orderNo)} · {row.title} · {lineStatusLabel[row.lineStatus]} · {formatRub(row.priceKopeks * row.qty)}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-      {rows.length === 0 ? <p className="mt-4 text-muted">Заказов на товары компании пока нет.</p> : null}
+      <AdminTable
+        title="Заказы 1P"
+        basePath="/admin/orders"
+        exportHref={adminHref("/admin/export", { entity: "orders", q: list.q, sort: list.sort, dir: list.dir, status: list.filters.status })}
+        columns={orderColumns}
+        rows={list.rows}
+        filters={[
+          {
+            key: "status",
+            label: "Статус",
+            value: list.filters.status ?? "",
+            options: [
+              { value: "", label: "Все статусы" },
+              ...Object.entries(lineStatusLabel).map(([value, label]) => ({ value, label })),
+            ],
+          },
+        ]}
+        bulk={[
+          { value: "confirmed", label: "Подтвердить" },
+          { value: "completed", label: "Завершить" },
+          { value: "cancelled", label: "Отменить" },
+        ]}
+        bulkAction={bulkOrdersAction}
+        q={list.q}
+        sort={list.sort}
+        dir={list.dir}
+        page={list.page}
+        pages={list.pages}
+        total={list.total}
+        pageSize={adminPageSize}
+        error={one("error")}
+        saved={one("saved")}
+      />
     </main>
   );
 }

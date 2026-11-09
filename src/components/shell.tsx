@@ -1,28 +1,39 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { Logo } from "@/components/logo";
 import { MobileNav } from "@/components/mobile-nav";
 import { TagSearch } from "@/components/tag-search";
 import { UserMenu } from "@/components/user-menu";
+import { brandBarClass } from "@/components/styles";
 import { cartCount } from "@/lib/cart";
-import { catalogFilters, catalogTags } from "@/lib/catalog";
+import { allCategories, catalogFilters, catalogTags } from "@/lib/catalog";
+import { categoryPathMap } from "@/lib/sef";
+import { withoutDemo } from "@/lib/taxonomy";
 import { site } from "@/lib/site";
 import { getCurrentUser } from "@/lib/session";
 
 export async function SiteHeader() {
   const user = await getCurrentUser();
   const count = await cartCount();
-  const [tags, filters] = await Promise.all([catalogTags(), catalogFilters()]);
+  const [tags, filters, categories] = await Promise.all([catalogTags(), catalogFilters(), allCategories()]);
+  const paths = categoryPathMap(withoutDemo(categories));
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-line bg-white text-ink">
-        <div className="mx-auto flex max-w-6xl items-center gap-2 px-3 py-2 sm:gap-3 sm:px-4 sm:py-3">
-          <Link href="/" className="shrink-0 font-display text-lg tracking-wide text-navy sm:text-xl">
-            {site.name}
-          </Link>
-          <div className="min-w-0 flex-1">
-            <TagSearch tags={tags} filters={filters} />
+      <header className="sticky top-0 z-40 text-white">
+        <div className={brandBarClass}>
+          <div className="mx-auto flex max-w-6xl items-center gap-2 px-3 py-2 sm:gap-3 sm:px-4 sm:py-2.5">
+            <Link
+              href="/"
+              aria-label={`${site.name}, ${site.domain}`}
+              className="shrink-0 rounded-xl outline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7ad7ff]"
+            >
+              <Logo />
+            </Link>
+            <div className="min-w-0 flex-1">
+              <TagSearch tags={tags} filters={filters} paths={paths} />
+            </div>
+            <UserMenu cartCount={count} loggedIn={Boolean(user)} staffRole={user?.staffRole ?? null} />
           </div>
-          <UserMenu cartCount={count} loggedIn={Boolean(user)} staffRole={user?.staffRole ?? null} />
         </div>
       </header>
       <MobileNav cartCount={count} loggedIn={Boolean(user)} />
@@ -31,7 +42,11 @@ export async function SiteHeader() {
 }
 
 export function HeaderFallback() {
-  return <header className="h-16 border-b border-line bg-white" />;
+  return (
+    <header>
+      <div className={`${brandBarClass} h-16`} />
+    </header>
+  );
 }
 
 export function SiteHeaderSlot() {
@@ -44,17 +59,20 @@ export function SiteHeaderSlot() {
 
 export function SiteFooter() {
   return (
-    <footer className="mt-auto border-t border-line bg-white">
-      <div className="mx-auto grid max-w-6xl gap-3 px-3 py-5 text-sm text-muted sm:px-4 sm:py-8 md:grid-cols-3">
+    <footer className={`${brandBarClass} mt-auto border-t border-white/15`}>
+      <div className="mx-auto grid max-w-6xl gap-4 px-3 py-6 text-sm sm:px-4 sm:py-8 md:grid-cols-3">
         <div>
-          <p className="font-display text-base text-ink">{site.name}</p>
-          <p>{site.address}</p>
+          <Logo domain="always" />
+          <p className="mt-3 text-white/80">{site.tagline}</p>
         </div>
-        <div>
-          <a href={`tel:${site.phoneHref}`}>{site.phone}</a>
-          <p>{site.email}</p>
+        <div className="text-white/85">
+          <a href={`tel:${site.phoneHref}`} className="font-semibold text-white">
+            {site.phone}
+          </a>
+          <p className="mt-1">{site.email}</p>
+          <p className="mt-1">{site.hours}</p>
         </div>
-        <p>{site.hours}</p>
+        <p className="text-white/85">{site.address}</p>
       </div>
     </footer>
   );
