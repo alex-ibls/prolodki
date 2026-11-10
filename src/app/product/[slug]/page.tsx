@@ -5,6 +5,7 @@ import { sendListingMessageAction } from "@/actions/messages";
 import { addToCartAction } from "@/actions/store";
 import { CrumbTitle } from "@/components/breadcrumbs";
 import { ProductGallery } from "@/components/product-gallery";
+import { YandexPlaceMap } from "@/components/yandex-place-map";
 import { ErrorNote, companyPhone, registeredSpec, SpecGrid, specsOf, specValue, telHref } from "@/components/catalog-ui";
 import { RevealPhone } from "@/components/reveal-phone";
 import { TrackView } from "@/components/track-view";
@@ -66,6 +67,18 @@ export default async function ProductPage({
             .join(" · ")}
         </p>
         <p className="mt-1 text-sm text-muted">Просмотры: {stats?.view ?? 0}</p>
+        {item.source === "individual" && item.lat != null && item.lng != null && process.env.YANDEX_MAPS_API_KEY ? (
+          <div className="mt-4 overflow-hidden rounded-2xl border border-line">
+            <YandexPlaceMap
+              apiKey={process.env.YANDEX_MAPS_API_KEY}
+              lat={item.lat}
+              lng={item.lng}
+              zoom={13}
+              interactive={false}
+              focusKey={`${item.lat},${item.lng}`}
+            />
+          </div>
+        ) : null}
         {item.source === "company" ? (
           <p className="mt-2 text-sm">{available ? `В наличии: ${item.quantity}` : "Нет в наличии"}</p>
         ) : null}

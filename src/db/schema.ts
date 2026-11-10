@@ -199,6 +199,8 @@ export const listings = pgTable("listings", {
   priceKopeks: integer("price_kopeks").notNull(),
   compareAtKopeks: integer("compare_at_kopeks"),
   city: text("city").notNull().default(""),
+  lat: doublePrecision("lat"),
+  lng: doublePrecision("lng"),
   registered: boolean("registered"),
   onOrder: boolean("on_order").notNull().default(false),
   quantity: integer("quantity").notNull().default(1),

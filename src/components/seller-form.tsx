@@ -1,7 +1,9 @@
 import { saveListingAction } from "@/actions/store";
 import { CategoryFields } from "@/components/category-fields";
+import { CityPlaceField } from "@/components/city-place-field";
 import { LimitedText } from "@/components/limited-text";
 import { PhotoField } from "@/components/photo-field";
+import { RubleInput, TextInput, YearInput } from "@/components/validated-inputs";
 import { buttonClass, inputClass, secondaryClass } from "@/components/styles";
 import { allCategories } from "@/lib/catalog";
 import { defsForCategory } from "@/lib/listings";
@@ -18,6 +20,8 @@ type ListingShape = {
   priceKopeks: number;
   compareAtKopeks: number | null;
   city: string;
+  lat?: number | null;
+  lng?: number | null;
   registered: boolean | null;
   onOrder: boolean;
   quantity: number;
@@ -66,7 +70,7 @@ export async function SellerForm({
       />
       <label className="text-sm">
         Название
-        <input name="title" required defaultValue={listing?.title} className={inputClass} disabled={locked} />
+        <TextInput name="title" required min={3} defaultValue={listing?.title} disabled={locked} />
       </label>
       <div className="grid gap-3 md:grid-cols-2">
         <label className="text-sm">
@@ -82,16 +86,19 @@ export async function SellerForm({
         </label>
         <label className="text-sm">
           Модель
-          <input name="model" defaultValue={listing?.model} className={inputClass} />
+          <TextInput name="model" defaultValue={listing?.model} />
         </label>
         <label className="text-sm">
           Год
-          <input name="year" defaultValue={listing?.year ?? ""} className={inputClass} />
+          <YearInput name="year" defaultValue={listing?.year == null ? "" : String(listing.year)} />
         </label>
-        <label className="text-sm">
-          Город
-          <input name="city" defaultValue={listing?.city} className={inputClass} />
-        </label>
+        <CityPlaceField
+          apiKey={process.env.YANDEX_MAPS_API_KEY ?? ""}
+          city={listing?.city}
+          lat={listing?.lat}
+          lng={listing?.lng}
+          disabled={locked}
+        />
         <label className="text-sm">
           Регистрация
           <select name="registered" required defaultValue={listing?.registered == null ? "" : listing.registered ? "yes" : "no"} className={inputClass} disabled={locked}>
@@ -102,7 +109,7 @@ export async function SellerForm({
         </label>
         <label className="text-sm">
           Цена, ₽
-          <input name="price" required defaultValue={listing ? listing.priceKopeks / 100 : ""} className={inputClass} />
+          <RubleInput name="price" required defaultValue={listing ? String(listing.priceKopeks / 100) : ""} />
         </label>
         <p className="text-sm text-muted">Объявление на доске: лодка БУ. Покупатель напишет или позвонит.</p>
       </div>

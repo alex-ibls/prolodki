@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { inputClass } from "@/components/styles";
+import { DecimalInput, TextInput } from "@/components/validated-inputs";
 
 type Def = { code: string; name: string; unit: string };
 type Leaf = { id: number; name: string; group: string };
@@ -41,12 +42,11 @@ export function CategoryFields({
           <label key={def.code} className="text-sm">
             {def.name}
             {def.unit ? `, ${def.unit}` : ""}
-            <input
-              name={`attr_${def.code}`}
-              defaultValue={values[def.code] ?? ""}
-              inputMode={def.code === "material" ? "text" : "decimal"}
-              className={inputClass}
-            />
+            {def.code === "material" ? (
+              <TextInput name={`attr_${def.code}`} defaultValue={values[def.code] ?? ""} />
+            ) : (
+              <DecimalInput name={`attr_${def.code}`} defaultValue={values[def.code] ?? ""} />
+            )}
           </label>
         ))}
       </div>

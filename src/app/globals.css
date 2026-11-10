@@ -50,6 +50,13 @@
   border-radius: 25%;
 }
 
+.place-map [class*="map-copyrights-promo"],
+.place-map [class*="gotoymaps"],
+.place-map [class*="gototaxi"],
+.place-map [class*="gototech"] {
+  display: none;
+}
+
 .tag,
 .btn,
 select.field,

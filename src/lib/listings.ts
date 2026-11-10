@@ -8,10 +8,11 @@ import {
 } from "@/db/schema";
 import { readListingDescription } from "@/lib/description";
 import { DomainError } from "@/lib/errors";
-import { parseIntStrict, parseNumber, parsePriceToKopeks } from "@/lib/format";
+import { parseIntStrict, parsePriceToKopeks, parseRublesToKopeks, rubleIssue, parseTenths, textInputLimit } from "@/lib/format";
 import { readRegistered } from "@/lib/labels";
 import { ensureIndividualSeller } from "@/lib/seller";
 import type { CurrentUser } from "@/lib/session";
+import { readCityPlace } from "@/lib/ru-cities";
 import { slugify } from "@/lib/slug";
 import { assertLeafCategory, resolveBrandId } from "@/lib/taxonomy";
 import { releaseStoredPhoto } from "@/lib/photos";
@@ -34,12 +35,12 @@ export function readAttributeValues(
     const raw = String(formData.get(`attr_${def.code}`) ?? "").trim();
     if (!raw) continue;
     if (def.code === "material") {
-      if (raw.length > 80) throw new DomainError("Материал — не больше 80 символов");
+      if (raw.length > textInputLimit) throw new DomainError(`«${def.name}» — не больше ${textInputLimit} символов`);
       values.push({ attributeDefId: def.id, valueNumber: null, valueText: raw });
       continue;
     }
-    const value = parseNumber(raw);
-    if (value === null) throw new DomainError(`«${def.name}» должно быть числом`);
+    const value = parseTenths(raw);
+    if (value === null) throw new DomainError(`«${def.name}» — число, можно с десятыми`);
     values.push({ attributeDefId: def.id, valueNumber: value, valueText: null });
   }
   return values;
@@ -59,8 +60,12 @@ export async function saveSellerListing(user: CurrentUser, listingId: string | n
   const brand = await resolveBrandId(String(formData.get("brandId") || ""));
   const title = String(formData.get("title") || "").trim();
   if (title.length < 3) throw new DomainError("Название слишком короткое");
-  const price = parsePriceToKopeks(String(formData.get("price") || ""));
-  if (price === null || price <= 0) throw new DomainError("Укажите цену в рублях");
+  if (title.length > textInputLimit) throw new DomainError(`Название — не больше ${textInputLimit} символов`);
+  const model = String(formData.get("model") || "").trim();
+  if (model.length > textInputLimit) throw new DomainError(`Модель — не больше ${textInputLimit} символов`);
+  const priceRaw = String(formData.get("price") || "").trim();
+  const price = parseRublesToKopeks(priceRaw);
+  if (price === null) throw new DomainError(rubleIssue(priceRaw, true));
   const compareRaw = String(formData.get("compareAt") || "").trim();
   const compareAt = compareRaw ? parsePriceToKopeks(compareRaw) : null;
   if (compareRaw && compareAt === null) throw new DomainError("Старая цена указана неверно");
@@ -108,12 +113,12 @@ export async function saveSellerListing(user: CurrentUser, listingId: string | n
     description: readListingDescription(String(formData.get("description") || "")),
     brandId: brand.brandId,
     brand: brand.brand,
-    model: String(formData.get("model") || "").trim(),
+    model,
     year,
     condition: "used" as const,
     priceKopeks: price,
     compareAtKopeks: compareAt,
-    city: String(formData.get("city") || user.city || "").trim(),
+    ...readCityPlace(String(formData.get("city") || ""), String(formData.get("lat") || ""), String(formData.get("lng") || ""), shouldReview),
     registered,
     onOrder: false,
     quantity: 1,
