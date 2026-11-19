@@ -9,7 +9,7 @@
     "deploy": "bash scripts/deploy.sh",
     "lint": "eslint",
     "db:new": "node scripts/prisma.mjs migrate dev",
-    "db:migrate": "node scripts/prisma.mjs migrate deploy",
+    "db:migrate": "node scripts/migrate-deploy.mjs",
     "db:setup": "npm run db:migrate && tsx src/db/setup.ts",
     "pm2:reload": "pm2 startOrReload ecosystem.config.cjs --update-env",
     "pm2:stop": "pm2 stop prolodki",
