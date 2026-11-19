@@ -95,7 +95,7 @@ export const orderColumns: AdminColumn[] = [
 ];
 
 export const moderationColumns: AdminColumn[] = [
-  { key: "title", label: "Объявление", sort: "title", firstDir: "asc" },
+  { key: "title", label: "Товар", sort: "title", firstDir: "asc" },
   { key: "source", label: "Источник" },
   { key: "category", label: "Категория" },
   { key: "price", label: "Цена", sort: "price", firstDir: "desc" },

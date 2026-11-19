@@ -12,7 +12,7 @@ const labels: Record<string, string> = {
   "verify-email": "Подтверждение email",
   orders: "Заказы",
   account: "Кабинет",
-  listings: "Объявления",
+  listings: "Товары",
   sales: "Продажи",
   brands: "Бренды",
   nomenclature: "Номенклатура",
@@ -28,7 +28,7 @@ export function crumbsForPath(pathname: string, names: Record<string, string> = 
   if (segments[0] === "product" && segments[1]) {
     const crumbs = [
       { href: "/", label: "Главная" },
-      { href: `/product/${segments[1]}`, label: "Объявление" },
+      { href: `/product/${segments[1]}`, label: "Товар" },
     ];
     if (segments[2] === "configurator") {
       crumbs.push({ href: `/product/${segments[1]}/configurator`, label: "Конфигуратор" });
@@ -86,11 +86,11 @@ function decodeSegment(segment: string) {
 function segmentLabel(segment: string, parent: string | undefined, root: string) {
   if (uuid.test(segment)) {
     if (parent === "orders") return "Заказ";
-    if (parent === "listings") return "Объявление";
+    if (parent === "listings") return "Товар";
     if (parent === "nomenclature") return "Позиция";
     if (parent === "customers") return "Клиент";
     if (parent === "deals") return "Сделка";
-    if (parent === "moderation") return "Объявление";
+    if (parent === "moderation") return "Товар";
     return "Страница";
   }
   if (/^\d+$/.test(segment)) {
@@ -99,7 +99,7 @@ function segmentLabel(segment: string, parent: string | undefined, root: string)
     return null;
   }
   if (segment === "new") {
-    if (parent === "listings") return "Новое объявление";
+    if (parent === "listings") return "Новый товар";
     if (parent === "customers") return "Новый клиент";
     if (parent === "nomenclature") return "Новая позиция";
     return "Новое";

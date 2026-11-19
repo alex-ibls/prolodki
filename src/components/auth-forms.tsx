@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { loginAction, registerAction } from "@/actions/store";
 import { CaptchaField } from "@/components/captcha-field";
 import { ErrorNote } from "@/components/catalog-ui";
-import { buttonClass, panelClass } from "@/components/styles";
+import { actionClass, buttonClass, panelClass } from "@/components/styles";
 import {
   type AuthField,
   type AuthFormState,
@@ -214,7 +214,7 @@ export function LoginForm({ next, initialError }: { next: string; initialError?:
           }}
           onBlur={() => fields.blur("password")}
         />
-        <button className={buttonClass} disabled={pending}>
+        <button className={actionClass} disabled={pending}>
           {pending ? "Входим…" : "Войти"}
         </button>
       </form>

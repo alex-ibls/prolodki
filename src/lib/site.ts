@@ -13,7 +13,7 @@ export const site = {
 
 export const demoAccounts = [
   ["manager@prolodki.test", "менеджер: CRM и номенклатура"],
-  ["moderator@prolodki.test", "модератор объявлений"],
+  ["moderator@prolodki.test", "модератор товаров"],
   ["buyer@prolodki.test", "покупатель"],
   ["private@prolodki.test", "частный продавец"],
 ] as const;

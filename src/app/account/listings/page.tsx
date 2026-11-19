@@ -10,7 +10,7 @@ import { listingStatusLabel } from "@/lib/labels";
 import { buyerListingsEnabled, ensureIndividualSeller } from "@/lib/seller";
 import { getCurrentUser } from "@/lib/session";
 
-export const metadata = { title: "Объявления" };
+export const metadata = { title: "Товары" };
 
 export default async function ListingsPage() {
   if (!buyerListingsEnabled) redirect("/account");
@@ -20,8 +20,8 @@ export default async function ListingsPage() {
   if (!user.emailVerifiedAt || !user.sellerProfile) {
     return (
       <main>
-        <h1 className="font-display text-xl font-extrabold tracking-tight text-deep md:text-2xl">Объявления</h1>
-        <p className="mt-3 text-muted">Чтобы разместить объявление, подтвердите email в профиле.</p>
+        <h1 className="font-display text-xl font-extrabold tracking-tight text-deep md:text-2xl">Товары</h1>
+        <p className="mt-3 text-muted">Чтобы разместить товар, подтвердите email в профиле.</p>
         <Link href="/account" className={`${actionClass} mt-4`}>
           К профилю
         </Link>
@@ -36,7 +36,7 @@ export default async function ListingsPage() {
   return (
     <main>
       <div className="flex items-center justify-between gap-3">
-        <h1 className="font-display text-xl font-extrabold tracking-tight text-deep md:text-2xl">Объявления</h1>
+        <h1 className="font-display text-xl font-extrabold tracking-tight text-deep md:text-2xl">Товары</h1>
         <Link href="/account/listings/new" className={actionClass}>
           Новое
         </Link>

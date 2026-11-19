@@ -154,7 +154,7 @@ export async function addToCartAction(formData: FormData) {
     const picked = await quoteKit(listing.nomenclatureId, formData.getAll("option").map(String).join(","));
     const options = picked.ids.join(",");
     const user = await getCurrentUser();
-    if (user && listing.sellerUserId === user.id) throw new DomainError("Нельзя купить своё объявление");
+    if (user && listing.sellerUserId === user.id) throw new DomainError("Нельзя купить свой товар");
     const cart = await getOrCreateCart();
     await db.delete(cartItems).where(eq(cartItems.cartId, cart.id));
     await db.insert(cartItems).values({ cartId: cart.id, listingId, qty, options });

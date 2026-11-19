@@ -55,7 +55,7 @@ export function readLogisticsAndLead(formData: FormData, price: (raw: string) =>
 }
 
 export async function saveSellerListing(user: CurrentUser, listingId: string | null, formData: FormData) {
-  if (!buyerListingsEnabled) throw new DomainError("Размещение объявлений пока недоступно");
+  if (!buyerListingsEnabled) throw new DomainError("Размещение товаров пока недоступно");
   if (!user.emailVerifiedAt) {
     throw new DomainError("Подтвердите email в профиле, чтобы продавать");
   }
@@ -95,10 +95,10 @@ export async function saveSellerListing(user: CurrentUser, listingId: string | n
       })
     : null;
   if (listingId && (!existing || existing.sellerUserId !== user.id)) {
-    throw new DomainError("Объявление не найдено");
+    throw new DomainError("Товар не найден");
   }
   if (existing && (existing.status === "reserved" || existing.status === "archived")) {
-    throw new DomainError("Это объявление уже нельзя редактировать");
+    throw new DomainError("Этот товар уже нельзя редактировать");
   }
 
   const removeIds = new Set(removedPhotoIds(formData));
@@ -108,7 +108,7 @@ export async function saveSellerListing(user: CurrentUser, listingId: string | n
   assertPhotoRoom(kept.length, files.length);
   const shouldReview = intent === "submit" || existing?.status === "published";
   if (shouldReview && !user.emailVerifiedAt) {
-    throw new DomainError("Подтвердите email, чтобы разместить объявление");
+    throw new DomainError("Подтвердите email, чтобы разместить товар");
   }
   if (shouldReview && photoCount < 1) throw new DomainError("Добавьте хотя бы одно фото");
 

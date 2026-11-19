@@ -87,10 +87,10 @@ export async function placeOrder(
         throw new DomainError("Одна из позиций больше не продаётся");
       }
       if (listing.source === "individual") {
-        throw new DomainError(`«${listing.title}» — объявление частного продавца. Напишите продавцу.`);
+        throw new DomainError(`«${listing.title}» — товар частного продавца. Напишите продавцу.`);
       }
       if (buyer && listing.sellerUserId && listing.sellerUserId === buyer.id) {
-        throw new DomainError(`Нельзя купить своё объявление «${listing.title}»`);
+        throw new DomainError(`Нельзя купить свой товар «${listing.title}»`);
       }
       if (listing.priceKopeks <= 0) throw new DomainError(`«${listing.title}»: цена по запросу`);
     }

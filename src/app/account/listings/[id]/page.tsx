@@ -32,7 +32,7 @@ export default async function EditListingPage({
   return (
     <main className="grid gap-3">
       <CrumbTitle label={listing.title} />
-      <h1 className="font-display text-xl font-extrabold tracking-tight text-deep md:text-2xl">Объявление</h1>
+      <h1 className="font-display text-xl font-extrabold tracking-tight text-deep md:text-2xl">Товар</h1>
       <SavedNote saved={one("saved")} />
       <p className="text-sm text-muted">
         Просмотры {stat?.view ?? 0} · в избранном {stat?.favorite ?? 0} · телефон {stat?.phone_reveal ?? 0}

@@ -163,7 +163,7 @@ export async function bulkModerationAction(formData: FormData) {
       })
       .where(and(inArray(listings.id, ids), eq(listings.status, "pending_review")))
       .returning({ id: listings.id });
-    if (updated.length === 0) throw new DomainError("Объявления уже разобраны");
+    if (updated.length === 0) throw new DomainError("Товары уже разобраны");
     redirect(withSaved(back));
   });
 }

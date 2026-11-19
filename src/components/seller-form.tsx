@@ -121,7 +121,7 @@ export async function SellerForm({
             className={inputClass}
           />
         </label>
-        <p className="text-sm text-muted">Объявление на доске: лодка БУ. Покупатель напишет или позвонит.</p>
+        <p className="text-sm text-muted">Товар на доске: лодка БУ. Покупатель напишет или позвонит.</p>
       </div>
       <div className="text-sm">
         Описание

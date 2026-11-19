@@ -33,7 +33,7 @@ export async function moderateAction(formData: FormData) {
       })
       .where(and(eq(listings.id, id), eq(listings.status, "pending_review")))
       .returning();
-    if (updated.length === 0) throw new DomainError("Объявление уже разобрано");
+    if (updated.length === 0) throw new DomainError("Товар уже разобран");
     redirect("/admin/moderation");
   });
 }

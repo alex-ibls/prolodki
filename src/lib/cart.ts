@@ -98,7 +98,7 @@ export async function assertCartQty(listingId: string, qty: number) {
   const listing = await db.query.listings.findFirst({ where: eq(listings.id, listingId) });
   if (!listing || listing.status !== "published") throw new DomainError("Товар недоступен");
   if (listing.source === "individual") {
-    throw new DomainError("Объявление частного продавца не оформляется заказом. Напишите продавцу.");
+    throw new DomainError("Товар частного продавца не оформляется заказом. Напишите продавцу.");
   }
   if (listing.priceKopeks <= 0) throw new DomainError("Цена по запросу, заказ не оформляется");
   return listing;

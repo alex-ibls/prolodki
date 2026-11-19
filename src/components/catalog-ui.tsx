@@ -303,7 +303,7 @@ export function telHref(phone: string) {
 
 export function ProductGrid({ items }: { items: CardData[] }) {
   if (items.length === 0) {
-    return <p className="text-muted">В этой подборке пока нет объявлений.</p>;
+    return <p className="text-muted">В этой подборке пока нет товаров.</p>;
   }
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-3">

@@ -55,7 +55,7 @@ export default async function CheckoutPage({
       <ErrorNote message={one("error")} />
       {orderable.length === 0 ? <p className="mt-4 text-sm text-muted">Сначала выберите лодку и нажмите «Купить» или «Заказать».</p> : null}
       {privateItems.length > 0 ? (
-        <p className="mt-4 text-sm">Частное объявление заказом не оформляется. Напишите продавцу.</p>
+        <p className="mt-4 text-sm">Частный товар заказом не оформляется. Напишите продавцу.</p>
       ) : null}
       {orderable.length > 0 ? (
         <ul className="mt-4 grid gap-3">

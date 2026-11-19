@@ -16,7 +16,7 @@ export default async function SalesPage() {
     return (
       <main>
         <h1 className="font-display text-xl font-extrabold tracking-tight text-deep md:text-2xl">Продажи</h1>
-        <p className="mt-3 text-muted">По частным объявлениям заказ не оформляется. Покупатель звонит по телефону в объявлении.</p>
+        <p className="mt-3 text-muted">По частным товарам заказ не оформляется. Покупатель звонит по телефону в карточке товара.</p>
       </main>
     );
   }

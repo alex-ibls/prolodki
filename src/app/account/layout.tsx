@@ -23,7 +23,7 @@ async function AccountFrame({ children }: { children: React.ReactNode }) {
         items={[
           { href: "/account/orders", label: "Мои заказы" },
           { href: "/account", label: "Профиль" },
-          ...(buyerListingsEnabled ? [{ href: "/account/listings", label: "Объявления" }] : []),
+          ...(buyerListingsEnabled ? [{ href: "/account/listings", label: "Товары" }] : []),
           ...(user.staffRole === "manager" ? [{ href: "/account/sales", label: "Продажи" }] : []),
         ]}
       />

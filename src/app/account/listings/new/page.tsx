@@ -4,7 +4,7 @@ import { readQuery } from "@/lib/query";
 import { buyerListingsEnabled, ensureIndividualSeller } from "@/lib/seller";
 import { getCurrentUser } from "@/lib/session";
 
-export const metadata = { title: "Новое объявление" };
+export const metadata = { title: "Новый товар" };
 
 export default async function NewListingPage({
   searchParams,
@@ -18,7 +18,7 @@ export default async function NewListingPage({
   const { one } = await readQuery(searchParams);
   return (
     <main>
-      <h1 className="mb-4 font-display text-xl font-extrabold tracking-tight text-deep md:text-2xl">Новое объявление</h1>
+      <h1 className="mb-4 font-display text-xl font-extrabold tracking-tight text-deep md:text-2xl">Новый товар</h1>
       <SellerForm error={one("error")} />
     </main>
   );

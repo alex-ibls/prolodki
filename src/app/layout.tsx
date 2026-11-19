@@ -11,7 +11,7 @@ const sans = Inter_Tight({ subsets: ["cyrillic", "latin"], variable: "--font-int
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
   title: { default: `${site.name} — ${site.domain}`, template: `%s — ${site.name}` },
-  description: `Моторные лодки, катера, яхты и гидроциклы: компания и частные объявления на ${site.domain}.`,
+  description: `Моторные лодки, катера, яхты и гидроциклы: компания и частные товары на ${site.domain}.`,
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

@@ -14,7 +14,7 @@ export default async function LoginPage({
   const { one } = await readQuery(searchParams);
   return (
     <main className={`${pageFrame} max-w-6xl`}>
-      <div className="max-w-md">
+      <div className="mx-auto w-full max-w-md">
       <h1 className="text-3xl">Вход</h1>
       <LoginForm next={one("next") || "/account"} initialError={one("error")} />
       <p className="mt-4 text-sm">

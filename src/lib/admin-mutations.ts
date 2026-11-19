@@ -11,7 +11,7 @@ export async function removeCategory(id: number, alsoDeleting = new Set<number>(
     throw new DomainError(`Сначала уберите вложенные категории: ${category.name}`);
   }
   const listing = await db.query.listings.findFirst({ where: eq(listings.categoryId, id) });
-  if (listing) throw new DomainError(`В категории «${category.name}» есть объявления`);
+  if (listing) throw new DomainError(`В категории «${category.name}» есть товары`);
   const good = await db.query.nomenclature.findFirst({ where: eq(nomenclature.categoryId, id) });
   if (good) throw new DomainError(`В категории «${category.name}» есть номенклатура`);
   await db.execute(sql`
@@ -29,7 +29,7 @@ export async function removeBrand(id: number) {
   const brand = await db.query.brands.findFirst({ where: eq(brands.id, id) });
   if (!brand) throw new DomainError("Бренд не найден");
   const listing = await db.query.listings.findFirst({ where: eq(listings.brandId, id) });
-  if (listing) throw new DomainError(`Бренд «${brand.name}» указан в объявлениях`);
+  if (listing) throw new DomainError(`Бренд «${brand.name}» указан в товарах`);
   const good = await db.query.nomenclature.findFirst({ where: eq(nomenclature.brandId, id) });
   if (good) throw new DomainError(`Бренд «${brand.name}» указан в номенклатуре`);
   await db.delete(brands).where(eq(brands.id, id));

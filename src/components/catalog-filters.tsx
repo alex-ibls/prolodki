@@ -220,7 +220,7 @@ export function CatalogFilters({
         />
       ) : null}
       {category && !pending && active.listings === 0 ? (
-        <p className="text-sm text-muted">В этом разделе пока нет объявлений.</p>
+        <p className="text-sm text-muted">В этом разделе пока нет товаров.</p>
       ) : null}
       {category && !pending && active.listings > 0 && active.attributes.length === 0 && !active.price && active.brands.length < 2 && active.conditions.length < 2 && active.sources.length < 2 ? (
         <p className="text-sm text-muted">В карточках этого раздела параметры одинаковые.</p>
