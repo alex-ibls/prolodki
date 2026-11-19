@@ -174,7 +174,7 @@ export function CatalogTree({
         <button className="sr-only">Сохранить</button>
         <input type="hidden" name="back" value={back} />
         <div className="overflow-hidden rounded-2xl border border-line bg-card">
-          <div className="flex items-center gap-2 bg-[#f4f8fc] px-3 py-3 text-sm text-muted">
+          <div className="flex items-center gap-2 bg-foam px-3 py-3 text-sm text-muted">
             <span className="w-8 shrink-0" />
             <input
               type="checkbox"
@@ -202,7 +202,7 @@ export function CatalogTree({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button className={buttonClass}>Сохранить</button>
-          <button form="catalog-bulk" className="btn bg-copper px-4 py-2 text-sm font-semibold text-white disabled:opacity-60" disabled={picked.length === 0}>
+          <button form="catalog-bulk" className={buttonClass} disabled={picked.length === 0}>
             Удалить выбранные
           </button>
           <a href={excel} className={secondaryClass}>
@@ -269,8 +269,8 @@ function Branch({ item, depth }: { item: CatalogTreeItem; depth: number }) {
         />
         <Link
           href={`/admin/catalog/${item.id}`}
-          title="Подробнее"
-          aria-label={`Подробнее: ${item.name}`}
+          title="Характеристики раздела"
+          aria-label={`Характеристики раздела: ${item.name}`}
           className="flex h-8 w-8 shrink-0 items-center justify-center text-navy"
         >
           <EyeIcon />

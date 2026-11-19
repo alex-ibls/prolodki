@@ -2,13 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { brandBarClass } from "@/components/styles";
 
 const items = [
   { href: "/history", label: "История", icon: "clock" },
   { href: "/favorites", label: "Избранное", icon: "heart" },
   { href: "/cart", label: "Корзина", icon: "bag" },
-  { href: "/messages", label: "Чаты", icon: "chat" },
   { href: "/account", label: "Кабинет", icon: "user" },
 ] as const;
 
@@ -23,30 +21,27 @@ export function MobileNav({
   return (
     <nav
       aria-label="Разделы"
-      className={`${brandBarClass} fixed inset-x-0 bottom-0 z-40 border-t border-white/15 pb-[env(safe-area-inset-bottom)] lg:hidden`}
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white pb-[env(safe-area-inset-bottom)] text-ink lg:hidden"
     >
-      <ul className="grid grid-cols-5">
+      <ul className="grid grid-cols-4">
         {items.map((item) => {
-          const href =
-            item.href === "/account" && !loggedIn ? "/login" : item.href === "/messages" && loggedIn ? "/account/messages" : item.href;
+          const href = item.href === "/account" && !loggedIn ? "/login" : item.href;
           const active =
             item.href === "/account"
-              ? pathname === "/account" || (pathname.startsWith("/account/") && !pathname.startsWith("/account/messages"))
-              : item.href === "/messages"
-                ? pathname.startsWith("/messages") || pathname.startsWith("/account/messages")
-                : pathname === href || pathname.startsWith(`${item.href}/`);
+              ? pathname === "/account" || pathname.startsWith("/account/")
+              : pathname === href || pathname.startsWith(`${item.href}/`);
           const label = item.href === "/account" && !loggedIn ? "Войти" : item.label;
           return (
             <li key={item.href}>
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className={`flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 text-[10px] leading-none ${active ? "font-semibold text-white" : "text-white/65"}`}
+                className={`flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 text-[10px] leading-none ${active ? "font-semibold text-navy" : "text-muted"}`}
               >
                 <span className="relative">
                   <NavIcon name={item.icon} />
                   {item.href === "/cart" && cartCount > 0 ? (
-                    <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-copper px-1 text-[10px] font-semibold text-white">
+                    <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-moss px-1 text-[10px] font-semibold text-white">
                       {cartCount}
                     </span>
                   ) : null}
@@ -92,13 +87,6 @@ function NavIcon({ name }: { name: (typeof items)[number]["icon"] }) {
       <svg {...common}>
         <path d="M6 8h12l-1 12H7L6 8z" />
         <path d="M9 8V7a3 3 0 0 1 6 0v1" />
-      </svg>
-    );
-  }
-  if (name === "chat") {
-    return (
-      <svg {...common}>
-        <path d="M5 16.5 4 20l3.5-1A8 8 0 1 0 5 16.5z" />
       </svg>
     );
   }

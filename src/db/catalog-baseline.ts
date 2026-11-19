@@ -1,6 +1,7 @@
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { db } from "./index";
 import { attributeDefs, brands, categories, listingAttributes, listings, nomenclature, nomenclatureAttributes } from "./schema";
+import { effectiveCharacteristics } from "../lib/characteristics";
 import { slugify } from "../lib/slug";
 
 const boatDefs = [
@@ -10,14 +11,16 @@ const boatDefs = [
   { code: "max_hp", name: "Мощность", unit: "л.с.", cardOrder: 4 },
   { code: "weight_kg", name: "Вес", unit: "кг", cardOrder: 5 },
   { code: "side_height_mm", name: "Высота борта", unit: "мм", cardOrder: 6 },
-  { code: "material", name: "Материал", unit: "", cardOrder: 7, filterable: false },
-  { code: "deadrise_mid", name: "Килеватость на миделе", unit: "°", cardOrder: 8 },
-  { code: "deadrise_transom", name: "Килеватость на транце", unit: "°", cardOrder: 9 },
-  { code: "transom_height_mm", name: "Высота транца", unit: "мм", cardOrder: 10 },
-  { code: "bottom_mm", name: "Толщина днища", unit: "мм", cardOrder: 11 },
-  { code: "side_thickness_mm", name: "Толщина борта", unit: "мм", cardOrder: 12 },
-  { code: "transom_thickness_mm", name: "Толщина транца", unit: "мм", cardOrder: 13 },
-  { code: "capacity_kg", name: "Грузоподъёмность", unit: "кг", cardOrder: 14 },
+  { code: "material", name: "Материал корпуса", unit: "", cardOrder: 7, filterable: false, dataType: "text" },
+  { code: "bottom_material", name: "Материал дна", unit: "", cardOrder: 8, filterable: false, dataType: "text" },
+  { code: "deadrise_mid", name: "Килеватость на миделе", unit: "°", cardOrder: 9 },
+  { code: "deadrise_transom", name: "Килеватость на транце", unit: "°", cardOrder: 10 },
+  { code: "transom_height_mm", name: "Высота транца", unit: "мм", cardOrder: 11 },
+  { code: "bottom_mm", name: "Толщина днища", unit: "мм", cardOrder: 12 },
+  { code: "side_thickness_mm", name: "Толщина борта", unit: "мм", cardOrder: 13 },
+  { code: "transom_thickness_mm", name: "Толщина транца", unit: "мм", cardOrder: 14 },
+  { code: "capacity_kg", name: "Грузоподъёмность", unit: "кг", cardOrder: 15 },
+  { code: "passengers", name: "Вместимость", unit: "чел.", cardOrder: 16 },
 ];
 
 type Node = { slug: string; name: string; sort: number; children?: Node[] };
@@ -78,6 +81,10 @@ const tree: Node[] = [
     ],
   },
   { slug: "rowing", name: "Гребные лодки", sort: 2 },
+  { slug: "motors", name: "Лодочные моторы", sort: 3 },
+  { slug: "trailers", name: "Прицепы", sort: 4 },
+  { slug: "accessories", name: "Аксессуары", sort: 5 },
+  { slug: "equipment", name: "Доп. оборудование", sort: 6 },
 ];
 
 const legacyCategory: Record<string, string> = {
@@ -94,7 +101,7 @@ const starterBrands = [
 
 export async function ensureCatalogStructure() {
   await upsertTree(tree, null);
-  await ensureLeafDefs();
+  await ensureBranchDefs();
   await moveLegacyProducts();
   await removeLegacyCategories();
   for (const brand of starterBrands) await ensureBrand(brand.name, brand.sort);
@@ -116,11 +123,9 @@ async function upsertTree(nodes: Node[], parentId: number | null) {
   }
 }
 
-async function ensureLeafDefs() {
-  const rows = await db.select().from(categories);
-  const parentIds = new Set(rows.map((row) => row.parentId).filter((id): id is number => id !== null));
+async function ensureBranchDefs() {
+  const rows = await db.select().from(categories).where(inArray(categories.slug, ["motor-boats", "rowing"]));
   for (const row of rows) {
-    if (parentIds.has(row.id)) continue;
     const defs = await db.select().from(attributeDefs).where(eq(attributeDefs.categoryId, row.id));
     const codes = new Set(defs.map((def) => def.code));
     const missing = boatDefs.filter((def) => !codes.has(def.code));
@@ -152,13 +157,13 @@ async function retargetListing(listingId: string, categoryId: number) {
       name: attributeDefs.name,
       unit: attributeDefs.unit,
       cardOrder: attributeDefs.cardOrder,
+      filterable: attributeDefs.filterable,
+      dataType: attributeDefs.dataType,
     })
     .from(listingAttributes)
     .innerJoin(attributeDefs, eq(attributeDefs.id, listingAttributes.attributeDefId))
     .where(eq(listingAttributes.listingId, listingId));
-  const next = new Map(
-    (await db.select().from(attributeDefs).where(eq(attributeDefs.categoryId, categoryId))).map((def) => [def.code, def.id]),
-  );
+  const next = new Map((await effectiveCharacteristics(categoryId)).map((def) => [def.code, def.id]));
   for (const attr of attrs) {
     let defId = next.get(attr.code);
     if (!defId) {
@@ -170,7 +175,8 @@ async function retargetListing(listingId: string, categoryId: number) {
           name: attr.name,
           unit: attr.unit,
           cardOrder: attr.cardOrder,
-          filterable: true,
+          filterable: attr.filterable,
+          dataType: attr.dataType,
         })
         .returning();
       defId = created.id;
@@ -194,13 +200,13 @@ async function retargetNomenclature(nomenclatureId: string, categoryId: number) 
       name: attributeDefs.name,
       unit: attributeDefs.unit,
       cardOrder: attributeDefs.cardOrder,
+      filterable: attributeDefs.filterable,
+      dataType: attributeDefs.dataType,
     })
     .from(nomenclatureAttributes)
     .innerJoin(attributeDefs, eq(attributeDefs.id, nomenclatureAttributes.attributeDefId))
     .where(eq(nomenclatureAttributes.nomenclatureId, nomenclatureId));
-  const next = new Map(
-    (await db.select().from(attributeDefs).where(eq(attributeDefs.categoryId, categoryId))).map((def) => [def.code, def.id]),
-  );
+  const next = new Map((await effectiveCharacteristics(categoryId)).map((def) => [def.code, def.id]));
   for (const attr of attrs) {
     let defId = next.get(attr.code);
     if (!defId) {
@@ -212,7 +218,8 @@ async function retargetNomenclature(nomenclatureId: string, categoryId: number) 
           name: attr.name,
           unit: attr.unit,
           cardOrder: attr.cardOrder,
-          filterable: true,
+          filterable: attr.filterable,
+          dataType: attr.dataType,
         })
         .returning();
       defId = created.id;

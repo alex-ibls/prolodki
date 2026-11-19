@@ -6,10 +6,11 @@ import { db } from "@/db";
 import { customers, dealNotes, deals, listings, users } from "@/db/schema";
 import { DomainError } from "@/lib/errors";
 import { parseIntStrict, parsePriceToKopeks } from "@/lib/format";
-import { readOnOrder, readRegistered } from "@/lib/labels";
+import { readOnOrder } from "@/lib/labels";
 import { requireManager, runAction } from "@/lib/guards";
-import { defsForCategory, readAttributeValues } from "@/lib/listings";
-import { assertLeafCategory, resolveBrandId } from "@/lib/taxonomy";
+import { saveNomenclatureKit } from "@/lib/kit";
+import { defsForCategory, readAttributeValues, readLogisticsAndLead } from "@/lib/listings";
+import { assertLeafCategory, ensureBrandName } from "@/lib/taxonomy";
 import { importNomenclatureCsv, saveNomenclatureItem, type ImportReport } from "@/lib/nomenclature";
 import { attachNomenclaturePhotos } from "@/lib/photos";
 
@@ -152,7 +153,7 @@ export async function saveNomenclatureAction(formData: FormData) {
     const categoryId = Number(formData.get("categoryId"));
     if (!categoryId) throw new DomainError("Выберите категорию");
     await assertLeafCategory(categoryId);
-    const brand = await resolveBrandId(String(formData.get("brandId") || ""));
+    const brand = await ensureBrandName(String(formData.get("brand") || ""));
     const parsed = nomenclatureInput(formData);
     const defs = await defsForCategory(categoryId);
     const saved = await saveNomenclatureItem(user.id, id, {
@@ -166,12 +167,8 @@ export async function saveNomenclatureAction(formData: FormData) {
       description: String(formData.get("description") || "").trim(),
       priceKopeks: parsed.price,
       compareAtKopeks: parsed.compareAt,
+      ...readLogisticsAndLead(formData, parsePriceToKopeks),
       quantityOnHand: parsed.quantity,
-      registered: (() => {
-        const registered = readRegistered(String(formData.get("registered") || ""));
-        if (registered === null) throw new DomainError("Укажите, регистрат или нерегистрат");
-        return registered;
-      })(),
       onOrder: (() => {
         const onOrder = readOnOrder(String(formData.get("onOrder") || ""));
         if (onOrder === null) throw new DomainError("Укажите, в наличии или на заказ");
@@ -180,6 +177,7 @@ export async function saveNomenclatureAction(formData: FormData) {
       publish: formData.get("publish") === "on",
       attributes: readAttributeValues(formData, defs),
     });
+    await saveNomenclatureKit(saved, formData);
     await attachNomenclaturePhotos(saved, formData);
     redirect(`/admin/nomenclature/${saved}?saved=1`);
   });

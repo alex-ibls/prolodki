@@ -14,7 +14,7 @@ import {
 import { DomainError } from "@/lib/errors";
 import { orderCode } from "@/lib/format";
 import type { CurrentUser } from "@/lib/session";
-import { availableOf } from "@/lib/stock";
+import { quoteKit } from "@/lib/kit";
 
 export type OrderStatus = "placed" | "confirmed" | "completed" | "cancelled";
 
@@ -92,13 +92,7 @@ export async function placeOrder(
       if (buyer && listing.sellerUserId && listing.sellerUserId === buyer.id) {
         throw new DomainError(`Нельзя купить своё объявление «${listing.title}»`);
       }
-      const available = listing.nomenclatureId
-        ? availableOf(nomById.get(listing.nomenclatureId)!)
-        : listing.quantity;
       if (listing.priceKopeks <= 0) throw new DomainError(`«${listing.title}»: цена по запросу`);
-      if (item.qty > available) {
-        throw new DomainError(`«${listing.title}»: доступно ${Math.max(available, 0)}`);
-      }
     }
 
     const [order] = await tx
@@ -118,16 +112,19 @@ export async function placeOrder(
     let amount = 0;
     for (const item of items) {
       const listing = listingById.get(item.listingId)!;
-      amount += listing.priceKopeks * item.qty;
+      const picked = await quoteKit(listing.nomenclatureId, item.options);
+      const unit = listing.priceKopeks + picked.extraKopeks;
+      amount += unit * item.qty;
       await tx.insert(orderItems).values({
         orderId: order.id,
         listingId: listing.id,
         nomenclatureId: listing.nomenclatureId,
         sellerUserId: listing.sellerUserId,
         organizationId: listing.organizationId,
-        title: listing.title,
-        priceKopeks: listing.priceKopeks,
+        title: picked.names.length ? `${listing.title}: ${picked.names.join(", ")}` : listing.title,
+        priceKopeks: unit,
         qty: item.qty,
+        options: picked.ids.join(","),
       });
 
       if (listing.nomenclatureId) {

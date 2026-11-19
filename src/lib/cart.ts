@@ -70,20 +70,23 @@ export async function mergeGuestCart(userId: string, guestToken: string | undefi
   for (const item of guestItems) {
     const listing = await db.query.listings.findFirst({ where: eq(listings.id, item.listingId) });
     if (!listing || listing.status !== "published" || listing.source === "individual") continue;
-    const available = listing.quantity;
-    if (available <= 0) continue;
     const [existing] = await db
       .select()
       .from(cartItems)
       .where(and(eq(cartItems.cartId, userCart.id), eq(cartItems.listingId, item.listingId)));
-    const nextQty = Math.min(available, (existing?.qty ?? 0) + item.qty);
+    const nextQty = (existing?.qty ?? 0) + item.qty;
     if (existing) {
       await db
         .update(cartItems)
         .set({ qty: nextQty })
         .where(and(eq(cartItems.cartId, userCart.id), eq(cartItems.listingId, item.listingId)));
     } else {
-      await db.insert(cartItems).values({ cartId: userCart.id, listingId: item.listingId, qty: nextQty });
+      await db.insert(cartItems).values({
+        cartId: userCart.id,
+        listingId: item.listingId,
+        qty: nextQty,
+        options: item.options,
+      });
     }
   }
   await db.delete(cartItems).where(eq(cartItems.cartId, guest.id));
@@ -98,8 +101,6 @@ export async function assertCartQty(listingId: string, qty: number) {
     throw new DomainError("Объявление частного продавца не оформляется заказом. Напишите продавцу.");
   }
   if (listing.priceKopeks <= 0) throw new DomainError("Цена по запросу, в корзину не добавляется");
-  if (listing.quantity < 1) throw new DomainError("Нет в наличии");
-  if (qty > listing.quantity) throw new DomainError(`Доступно ${listing.quantity}`);
   return listing;
 }
 

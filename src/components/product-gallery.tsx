@@ -2,18 +2,34 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export function ProductGallery({ title, images }: { title: string; images: { path: string }[] }) {
+export function ProductGallery({
+  title,
+  images,
+  attached = false,
+  children,
+}: {
+  title: string;
+  images: { path: string }[];
+  attached?: boolean;
+  children?: React.ReactNode;
+}) {
   const strip = useRef<HTMLDivElement>(null);
   const lightbox = useRef<HTMLDivElement>(null);
   const indexRef = useRef(0);
   const drag = useRef({ x: 0, moved: false });
   const [index, setIndex] = useState(0);
   const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<"one" | "tiles">("tiles");
+  const modeRef = useRef(mode);
   const photo = images[index] ?? images[0];
 
   useEffect(() => {
     indexRef.current = index;
   }, [index]);
+
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
 
   function shift(delta: number) {
     const node = open ? lightbox.current : strip.current;
@@ -30,12 +46,11 @@ export function ProductGallery({ title, images }: { title: string; images: { pat
 
   useEffect(() => {
     if (!open) return;
-    const node = lightbox.current;
-    if (node) node.scrollLeft = indexRef.current * node.clientWidth;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     function onKey(event: KeyboardEvent) {
       if (event.key === "Escape") close();
+      if (modeRef.current !== "one") return;
       if (event.key === "ArrowRight") shift(1);
       if (event.key === "ArrowLeft") shift(-1);
     }
@@ -46,10 +61,31 @@ export function ProductGallery({ title, images }: { title: string; images: { pat
     };
   }, [open]);
 
+  useEffect(() => {
+    if (!open || mode !== "one") return;
+    const frame = requestAnimationFrame(() => {
+      const node = lightbox.current;
+      if (node) node.scrollLeft = indexRef.current * node.clientWidth;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [open, mode]);
+
   function go(next: number) {
     const node = strip.current;
     setIndex(next);
     node?.scrollTo({ left: next * node.clientWidth, behavior: "smooth" });
+  }
+
+  function openViewer() {
+    setMode("tiles");
+    setOpen(true);
+  }
+
+  function showTile(next: number) {
+    setIndex(next);
+    setMode("one");
+    const node = strip.current;
+    if (node) node.scrollTo({ left: next * node.clientWidth });
   }
 
   function armDrag(event: React.PointerEvent) {
@@ -72,12 +108,21 @@ export function ProductGallery({ title, images }: { title: string; images: { pat
   }
 
   if (!photo) {
-    return <div className="-mx-3 flex h-56 items-end bg-navy p-6 font-display text-xl font-bold text-white sm:mx-0 sm:h-80 sm:rounded-2xl">{title}</div>;
+    return (
+      <div>
+        <div
+          className={`-mx-3 flex h-56 items-end bg-navy p-6 font-display text-xl font-bold text-white sm:mx-0 sm:h-80 ${attached ? "sm:rounded-b-2xl" : "sm:rounded-2xl"}`}
+        >
+          {title}
+        </div>
+        {children}
+      </div>
+    );
   }
 
   return (
     <div>
-      <div className="relative -mx-3 overflow-hidden bg-foam sm:mx-0 sm:rounded-2xl">
+      <div className={`relative -mx-3 overflow-hidden bg-foam sm:mx-0 ${attached ? "sm:rounded-b-2xl" : "sm:rounded-2xl"}`}>
         <div
           ref={strip}
           className="flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -93,7 +138,7 @@ export function ProductGallery({ title, images }: { title: string; images: { pat
               <Zone
                 label={`Открыть ${title}`}
                 className={images.length > 1 ? "left-[30%] w-[40%]" : "inset-x-0"}
-                onTap={() => setOpen(true)}
+                onTap={openViewer}
                 onDown={armDrag}
                 onMove={noteDrag}
                 ready={tapped}
@@ -105,13 +150,9 @@ export function ProductGallery({ title, images }: { title: string; images: { pat
           ))}
         </div>
         {images.length > 1 ? (
-          <>
-            <EdgeHint side="left" hidden={index === 0} />
-            <EdgeHint side="right" hidden={index === images.length - 1} />
-            <p className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-navy/80 px-2.5 py-1 text-xs font-semibold text-white">
-              {index + 1} / {images.length}
-            </p>
-          </>
+          <p className="pointer-events-none absolute bottom-3 right-3 rounded-md bg-navy/80 px-2.5 py-1 text-xs font-semibold text-white">
+            {index + 1} / {images.length}
+          </p>
         ) : null}
       </div>
       {images.length > 1 ? (
@@ -121,7 +162,7 @@ export function ProductGallery({ title, images }: { title: string; images: { pat
               key={image.path}
               type="button"
               onClick={() => go(imageIndex)}
-              className={`shrink-0 rounded-xl bg-[#e8f4fc] ${imageIndex === index ? "ring-2 ring-navy" : ""}`}
+              className={`shrink-0 rounded-md bg-foam ${imageIndex === index ? "ring-2 ring-navy" : ""}`}
               aria-label={`Фото ${imageIndex + 1}`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -130,42 +171,85 @@ export function ProductGallery({ title, images }: { title: string; images: { pat
           ))}
         </div>
       ) : null}
+      {children}
       {open ? (
-        <div className="fixed inset-0 z-[70] bg-black" role="dialog" aria-modal="true" aria-label={title}>
-          <div
-            ref={lightbox}
-            className="flex h-full snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            onScroll={noteScroll}
-          >
-            {images.map((image) => (
-              <div
-                key={image.path}
-                className="flex h-full min-w-full shrink-0 basis-full snap-center items-center justify-center overflow-auto p-4 touch-auto"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`/media/${image.path}`} alt="" className="max-h-full max-w-full object-contain" />
+        <div className="fixed inset-0 z-[70] flex flex-col bg-paper text-ink" role="dialog" aria-modal="true" aria-label={title}>
+          <div className="flex items-center gap-3 border-b border-line bg-white px-3 py-2">
+            {images.length > 1 ? (
+              <div className="flex gap-2">
+                <button type="button" aria-label="Одно фото" aria-pressed={mode === "one"} className={viewerModeClass(mode === "one")} onClick={() => setMode("one")}>
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                    <rect x="4" y="5" width="16" height="14" rx="1.5" />
+                  </svg>
+                </button>
+                <button type="button" aria-label="Все фото" aria-pressed={mode === "tiles"} className={viewerModeClass(mode === "tiles")} onClick={() => setMode("tiles")}>
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                    <rect x="4" y="4" width="7" height="7" />
+                    <rect x="13" y="4" width="7" height="7" />
+                    <rect x="4" y="13" width="7" height="7" />
+                    <rect x="13" y="13" width="7" height="7" />
+                  </svg>
+                </button>
               </div>
-            ))}
+            ) : (
+              <span className="text-sm font-semibold text-deep">Фото</span>
+            )}
+            {mode === "one" && images.length > 1 ? (
+              <p className="ml-auto text-sm font-semibold text-deep">
+                {index + 1} / {images.length}
+              </p>
+            ) : (
+              <span className="ml-auto" />
+            )}
+            <button type="button" aria-label="Закрыть" className="flex h-10 w-10 items-center justify-center text-deep" onClick={close}>
+              <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                <path d="M6 6 18 18M18 6 6 18" />
+              </svg>
+            </button>
           </div>
-          <button
-            type="button"
-            aria-label="Закрыть"
-            className="absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center text-white"
-            onClick={close}
-          >
-            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-              <path d="M6 6 18 18M18 6 6 18" />
-            </svg>
-          </button>
-          {images.length > 1 ? (
-            <p className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 text-sm text-white">
-              {index + 1} / {images.length}
-            </p>
-          ) : null}
+          {mode === "tiles" ? (
+            <div className="min-h-0 flex-1 overflow-auto p-3">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {images.map((image, imageIndex) => (
+                  <button
+                    key={image.path}
+                    type="button"
+                    onClick={() => showTile(imageIndex)}
+                    className={`overflow-hidden bg-white ${imageIndex === index ? "ring-2 ring-navy" : ""}`}
+                    aria-label={`Открыть фото ${imageIndex + 1}`}
+                    aria-current={imageIndex === index ? "true" : undefined}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`/media/${image.path}`} alt="" className="aspect-[4/3] w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div
+              ref={lightbox}
+              className="flex min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              onScroll={noteScroll}
+            >
+              {images.map((image) => (
+                <div
+                  key={image.path}
+                  className="flex h-full min-w-full shrink-0 basis-full snap-center items-center justify-center overflow-auto p-4 touch-auto"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={`/media/${image.path}`} alt="" className="max-h-full max-w-full object-contain" />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       ) : null}
     </div>
   );
+}
+
+function viewerModeClass(active: boolean) {
+  return `btn flex h-10 w-10 items-center justify-center ${active ? "bg-navy text-white" : "border border-line bg-white text-deep"}`;
 }
 
 function Zone({
@@ -194,18 +278,5 @@ function Zone({
         if (ready()) onTap();
       }}
     />
-  );
-}
-
-function EdgeHint({ side, hidden }: { side: "left" | "right"; hidden: boolean }) {
-  if (hidden) return null;
-  return (
-    <span
-      className={`pointer-events-none absolute top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-navy shadow ${side === "left" ? "left-3" : "right-3"}`}
-    >
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-        {side === "left" ? <path d="M14 6 8 12l6 6" /> : <path d="M10 6l6 6-6 6" />}
-      </svg>
-    </span>
   );
 }

@@ -62,7 +62,6 @@ export function UserMenu({
     { href: "/history", label: "История" },
     { href: "/cart", label: cartCount > 0 ? `Корзина (${cartCount})` : "Корзина" },
     { href: loggedIn ? "/account/orders" : "/orders", label: "Заказы" },
-    { href: loggedIn ? "/account/messages" : "/messages", label: "Сообщения" },
   ];
   const work = [
     { href: loggedIn ? "/account" : "/login", label: loggedIn ? "Кабинет" : "Войти" },
@@ -79,7 +78,7 @@ export function UserMenu({
     <div ref={root} className="relative shrink-0">
       <button
         type="button"
-        className="btn relative flex h-11 w-11 items-center justify-center border border-white/40 text-white"
+        className="btn relative flex h-11 w-11 items-center justify-center border border-line text-ink"
         aria-expanded={open}
         aria-controls={panelId}
         aria-label={open ? "Закрыть меню" : "Меню"}
@@ -95,7 +94,7 @@ export function UserMenu({
           </svg>
         )}
         {cartCount > 0 ? (
-          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-copper px-1 text-[11px] font-semibold text-white">
+          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-moss px-1 text-[11px] font-semibold text-white">
             {cartCount}
           </span>
         ) : null}

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { brands, categories, listings, nomenclature } from "@/db/schema";
 import { removeBrand, removeCategory } from "@/lib/admin-mutations";
+import { saveCategoryCharacteristics } from "@/lib/characteristics";
 import { allCategories } from "@/lib/catalog";
 import { DomainError } from "@/lib/errors";
 import { parseIntStrict } from "@/lib/format";
@@ -123,6 +124,16 @@ export async function deleteCategoryAction(formData: FormData) {
     const id = Number(formData.get("id") || "");
     await removeCategory(id);
     redirect(withSaved(back));
+  });
+}
+
+export async function saveCategoryCharacteristicsAction(formData: FormData) {
+  const id = Number(formData.get("categoryId") || "");
+  const back = Number.isInteger(id) && id > 0 ? `/admin/catalog/${id}` : "/admin/catalog";
+  await runAction(back, async (user) => {
+    if (user.staffRole !== "manager") throw new DomainError("Каталог доступен менеджеру");
+    await saveCategoryCharacteristics(id, formData);
+    redirect(`${back}?saved=1`);
   });
 }
 

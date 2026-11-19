@@ -1,7 +1,6 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import {
-  attributeDefs,
   listingAttributes,
   listingImages,
   listings,
@@ -9,32 +8,28 @@ import {
 import { readListingDescription } from "@/lib/description";
 import { DomainError } from "@/lib/errors";
 import { parseIntStrict, parsePriceToKopeks, parseRublesToKopeks, rubleIssue, parseTenths, textInputLimit } from "@/lib/format";
-import { readRegistered } from "@/lib/labels";
 import { ensureIndividualSeller } from "@/lib/seller";
 import type { CurrentUser } from "@/lib/session";
 import { readCityPlace } from "@/lib/ru-cities";
 import { slugify } from "@/lib/slug";
-import { assertLeafCategory, resolveBrandId } from "@/lib/taxonomy";
+import { effectiveCharacteristics } from "@/lib/characteristics";
+import { assertLeafCategory, ensureBrandName } from "@/lib/taxonomy";
 import { releaseStoredPhoto } from "@/lib/photos";
 import { assertPhotoRoom, photoFiles, removedPhotoIds, saveListingImage } from "@/lib/uploads";
 
 export async function defsForCategory(categoryId: number) {
-  return db
-    .select()
-    .from(attributeDefs)
-    .where(eq(attributeDefs.categoryId, categoryId))
-    .orderBy(asc(attributeDefs.cardOrder), asc(attributeDefs.name));
+  return effectiveCharacteristics(categoryId);
 }
 
 export function readAttributeValues(
   formData: FormData,
-  defs: { id: number; code: string; name: string }[],
+  defs: { id: number; code: string; name: string; dataType: string }[],
 ) {
   const values: { attributeDefId: number; valueNumber: number | null; valueText: string | null }[] = [];
   for (const def of defs) {
     const raw = String(formData.get(`attr_${def.code}`) ?? "").trim();
     if (!raw) continue;
-    if (def.code === "material") {
+    if (def.dataType === "text") {
       if (raw.length > textInputLimit) throw new DomainError(`«${def.name}» — не больше ${textInputLimit} символов`);
       values.push({ attributeDefId: def.id, valueNumber: null, valueText: raw });
       continue;
@@ -44,6 +39,19 @@ export function readAttributeValues(
     values.push({ attributeDefId: def.id, valueNumber: value, valueText: null });
   }
   return values;
+}
+
+export const leadTimeLimit = 80;
+
+export function readLogisticsAndLead(formData: FormData, price: (raw: string) => number | null) {
+  const logisticsRaw = String(formData.get("logistics") || "").trim();
+  const parsed = logisticsRaw ? price(logisticsRaw) : null;
+  if (logisticsRaw && (parsed === null || parsed <= 0)) {
+    throw new DomainError("Цена логистики указана неверно");
+  }
+  const leadTime = String(formData.get("leadTime") || "").trim();
+  if (leadTime.length > leadTimeLimit) throw new DomainError("Срок поставки — не больше 80 символов");
+  return { logisticsKopeks: parsed, leadTime };
 }
 
 export async function saveSellerListing(user: CurrentUser, listingId: string | null, formData: FormData) {
@@ -57,7 +65,7 @@ export async function saveSellerListing(user: CurrentUser, listingId: string | n
   const categoryId = Number(formData.get("categoryId"));
   if (!categoryId) throw new DomainError("Выберите категорию");
   await assertLeafCategory(categoryId);
-  const brand = await resolveBrandId(String(formData.get("brandId") || ""));
+  const brand = await ensureBrandName(String(formData.get("brand") || ""));
   const title = String(formData.get("title") || "").trim();
   if (title.length < 3) throw new DomainError("Название слишком короткое");
   if (title.length > textInputLimit) throw new DomainError(`Название — не больше ${textInputLimit} символов`);
@@ -66,6 +74,7 @@ export async function saveSellerListing(user: CurrentUser, listingId: string | n
   const priceRaw = String(formData.get("price") || "").trim();
   const price = parseRublesToKopeks(priceRaw);
   if (price === null) throw new DomainError(rubleIssue(priceRaw, true));
+  const offer = readLogisticsAndLead(formData, parseRublesToKopeks);
   const compareRaw = String(formData.get("compareAt") || "").trim();
   const compareAt = compareRaw ? parsePriceToKopeks(compareRaw) : null;
   if (compareRaw && compareAt === null) throw new DomainError("Старая цена указана неверно");
@@ -74,8 +83,6 @@ export async function saveSellerListing(user: CurrentUser, listingId: string | n
   if (yearRaw && (year === null || year < 1950 || year > 2100)) {
     throw new DomainError("Год указан неверно");
   }
-  const registered = readRegistered(String(formData.get("registered") || ""));
-  if (registered === null) throw new DomainError("Укажите, регистрат или нерегистрат");
   const defs = await defsForCategory(categoryId);
   const attributes = readAttributeValues(formData, defs);
   if (profile.type !== "individual") throw new DomainError("Публиковать может только частный продавец");
@@ -118,8 +125,9 @@ export async function saveSellerListing(user: CurrentUser, listingId: string | n
     condition: "used" as const,
     priceKopeks: price,
     compareAtKopeks: compareAt,
+    logisticsKopeks: offer.logisticsKopeks,
+    leadTime: offer.leadTime,
     ...readCityPlace(String(formData.get("city") || ""), String(formData.get("lat") || ""), String(formData.get("lng") || ""), shouldReview),
-    registered,
     onOrder: false,
     quantity: 1,
     status,

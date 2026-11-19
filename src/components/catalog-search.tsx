@@ -34,7 +34,7 @@ export function CatalogSearch({ paths }: { paths: Record<string, string> }) {
         value={draft}
         aria-label="Поиск"
         placeholder="Название, бренд, модель"
-        className="field search h-10 w-full border border-white/70 bg-white px-4 text-sm text-ink outline-none placeholder:text-muted focus:border-copper"
+        className="field search h-10 w-full border border-line bg-foam px-4 text-sm text-ink outline-none placeholder:text-muted focus:border-navy"
         onChange={(event) => setDraft(event.target.value)}
       />
     </form>

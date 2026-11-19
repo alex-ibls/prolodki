@@ -16,10 +16,7 @@ export default async function SalesPage() {
     return (
       <main>
         <h1 className="text-3xl">Продажи</h1>
-        <p className="mt-3 text-muted">
-          По частным объявлениям заказ не оформляется. Договорённость идёт в{" "}
-          <Link href="/account/messages" className="font-semibold">сообщениях</Link>.
-        </p>
+        <p className="mt-3 text-muted">По частным объявлениям заказ не оформляется. Покупатель звонит по телефону в объявлении.</p>
       </main>
     );
   }

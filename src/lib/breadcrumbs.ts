@@ -12,7 +12,6 @@ const labels: Record<string, string> = {
   register: "Регистрация",
   "verify-email": "Подтверждение email",
   orders: "Заказы",
-  messages: "Сообщения",
   account: "Кабинет",
   listings: "Объявления",
   sales: "Продажи",
@@ -28,10 +27,14 @@ export function crumbsForPath(pathname: string, names: Record<string, string> = 
   if (segments.length === 0) return [];
   if (segments[0] === "catalog") return catalogCrumbs(segments, names);
   if (segments[0] === "product" && segments[1]) {
-    return [
+    const crumbs = [
       { href: "/", label: "Главная" },
       { href: `/product/${segments[1]}`, label: "Объявление" },
     ];
+    if (segments[2] === "configurator") {
+      crumbs.push({ href: `/product/${segments[1]}/configurator`, label: "Конфигуратор" });
+    }
+    return crumbs;
   }
   if (segments[0] === "checkout") {
     return [
@@ -85,7 +88,6 @@ function decodeSegment(segment: string) {
 function segmentLabel(segment: string, parent: string | undefined, root: string) {
   if (uuid.test(segment)) {
     if (parent === "orders") return "Заказ";
-    if (parent === "messages") return "Переписка";
     if (parent === "listings") return "Объявление";
     if (parent === "nomenclature") return "Позиция";
     if (parent === "customers") return "Клиент";

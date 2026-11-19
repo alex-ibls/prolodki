@@ -75,8 +75,9 @@ export function catalogParamsFromSegments(segments: string[]) {
       const code = body[index + 1];
       const side = body[index + 2];
       const value = body[index + 3];
-      if (!code || (side !== "from" && side !== "to") || !value) return null;
-      params.set(`attr_${code}_${side === "from" ? "min" : "max"}`, value);
+      if (!code || (side !== "from" && side !== "to" && side !== "eq") || !value) return null;
+      if (side === "eq") params.set(`attr_${code}`, value);
+      else params.set(`attr_${code}_${side === "from" ? "min" : "max"}`, value);
       index += 4;
       continue;
     }
@@ -153,9 +154,7 @@ function filterSegments(params: URLSearchParams) {
   };
   push("brand", params.get("brand"));
   push("condition", allowed(params.get("condition"), ["new", "used"]));
-  push("source", allowed(params.get("source"), ["company", "individual"]));
   push("city", params.get("city"));
-  push("registered", allowed(params.get("registered"), ["yes", "no"]));
   push("availability", allowed(params.get("availability"), ["stock", "order"]));
   push("price", allowed(params.get("price") || legacyPrice(params.get("sort")), ["asc", "desc"]));
   push("price-from", params.get("price_min"));
@@ -168,6 +167,14 @@ function filterSegments(params: URLSearchParams) {
     const value = params.get(match[0]);
     if (!value) continue;
     parts.push("attr", encodePart(match[1]), match[2] === "min" ? "from" : "to", encodePart(value));
+  }
+  const equals = [...params.keys()]
+    .filter((key) => key.startsWith("attr_") && !key.endsWith("_min") && !key.endsWith("_max"))
+    .sort();
+  for (const key of equals) {
+    const value = params.get(key);
+    if (!value) continue;
+    parts.push("attr", encodePart(key.slice("attr_".length)), "eq", encodePart(value));
   }
   return parts;
 }

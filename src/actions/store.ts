@@ -10,6 +10,7 @@ import { claimGuestSession, recordListingEvent } from "@/lib/activity";
 import { type AuthFormState, captchaError, firstFormError, loginSchema, registerSchema } from "@/lib/auth-fields";
 import { verifyCaptcha } from "@/lib/captcha";
 import { assertCartQty, getOrCreateCart } from "@/lib/cart";
+import { quoteKit } from "@/lib/kit";
 import { DomainError, isNextNavigation } from "@/lib/errors";
 import { readGuestToken } from "@/lib/guest";
 import { runAction } from "@/lib/guards";
@@ -150,6 +151,8 @@ export async function addToCartAction(formData: FormData) {
   const qty = Number(formData.get("qty") || 1);
   try {
     const listing = await assertCartQty(listingId, qty);
+    const picked = await quoteKit(listing.nomenclatureId, formData.getAll("option").map(String).join(","));
+    const options = picked.ids.join(",");
     const user = await getCurrentUser();
     if (user && listing.sellerUserId === user.id) throw new DomainError("Нельзя купить своё объявление");
     const cart = await getOrCreateCart();
@@ -158,14 +161,13 @@ export async function addToCartAction(formData: FormData) {
       .from(cartItems)
       .where(and(eq(cartItems.cartId, cart.id), eq(cartItems.listingId, listingId)));
     const nextQty = (existing?.qty ?? 0) + qty;
-    if (nextQty > listing.quantity) throw new DomainError(`Доступно ${listing.quantity}`);
     if (existing) {
       await db
         .update(cartItems)
-        .set({ qty: nextQty })
+        .set({ qty: nextQty, options })
         .where(and(eq(cartItems.cartId, cart.id), eq(cartItems.listingId, listingId)));
     } else {
-      await db.insert(cartItems).values({ cartId: cart.id, listingId, qty });
+      await db.insert(cartItems).values({ cartId: cart.id, listingId, qty, options });
     }
     await recordListingEvent({
       listingId,
@@ -176,7 +178,9 @@ export async function addToCartAction(formData: FormData) {
   } catch (error) {
     if (isNextNavigation(error)) throw error;
     const message = error instanceof DomainError ? error.message : "Не удалось добавить в корзину";
-    redirect(`/product/${slug}?error=${encodeURIComponent(message)}`);
+    const configurator = `/product/${slug}/configurator`;
+    const back = formData.get("next") === configurator ? configurator : `/product/${slug}`;
+    redirect(`${back}?error=${encodeURIComponent(message)}`);
   }
   redirect("/cart");
 }
@@ -192,10 +196,10 @@ export async function updateCartAction(formData: FormData) {
         .where(and(eq(cartItems.cartId, cart.id), eq(cartItems.listingId, listingId)));
     } else {
       const qty = Number(formData.get("qty") || 1);
-      const listing = await assertCartQty(listingId, qty);
+      await assertCartQty(listingId, qty);
       await db
         .update(cartItems)
-        .set({ qty: Math.min(qty, listing.quantity) })
+        .set({ qty })
         .where(and(eq(cartItems.cartId, cart.id), eq(cartItems.listingId, listingId)));
     }
   } catch (error) {

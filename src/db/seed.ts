@@ -3,7 +3,6 @@ import { eq } from "drizzle-orm";
 import { ensureCatalogStructure } from "./catalog-baseline";
 import { db } from "./index";
 import {
-  attributeDefs,
   categories,
   customers,
   listingAttributes,
@@ -13,6 +12,7 @@ import {
   sellerProfiles,
   users,
 } from "./schema";
+import { effectiveCharacteristics } from "../lib/characteristics";
 import { demoPassword, site } from "../lib/site";
 import { saveNomenclatureItem } from "../lib/nomenclature";
 import { writeUpload } from "../lib/uploads";
@@ -97,7 +97,6 @@ export async function seed() {
       priceKopeks: 18600000,
       compareAtKopeks: null,
       quantityOnHand: 4,
-      registered: true,
       onOrder: false,
       color: "#1c4666",
       attrs: { length_m: 3.9, width_m: 1.48, seats: 3, max_hp: 15, weight_kg: 138 },
@@ -113,7 +112,6 @@ export async function seed() {
       priceKopeks: 89000000,
       compareAtKopeks: 94000000,
       quantityOnHand: 2,
-      registered: true,
       onOrder: false,
       color: "#143047",
       attrs: { length_m: 4.7, width_m: 1.95, seats: 5, max_hp: 60, weight_kg: 320 },
@@ -129,7 +127,6 @@ export async function seed() {
       priceKopeks: 420000000,
       compareAtKopeks: null,
       quantityOnHand: 1,
-      registered: true,
       onOrder: true,
       color: "#0f2740",
       attrs: { length_m: 7.6, width_m: 2.55, seats: 6, max_hp: 150, weight_kg: 1450 },
@@ -145,7 +142,6 @@ export async function seed() {
       priceKopeks: 76000000,
       compareAtKopeks: null,
       quantityOnHand: 3,
-      registered: true,
       onOrder: false,
       color: "#1d5c78",
       attrs: { seats: 3, max_hp: 110, weight_kg: 280 },
@@ -178,7 +174,6 @@ export async function seed() {
     condition: "used",
     priceKopeks: 7500000,
     city: "Клин",
-    registered: false,
     onOrder: false,
     quantity: 1,
     status: "published",
@@ -203,7 +198,7 @@ async function categoryBySlug(slug: string) {
 }
 
 async function attrs(categoryId: number, values: Record<string, number | undefined>) {
-  const defs = await db.select().from(attributeDefs).where(eq(attributeDefs.categoryId, categoryId));
+  const defs = await effectiveCharacteristics(categoryId);
   return defs.flatMap((def) => {
     const value = values[def.code];
     return value === undefined ? [] : [{ attributeDefId: def.id, valueNumber: value }];

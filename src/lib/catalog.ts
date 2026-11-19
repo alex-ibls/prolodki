@@ -7,8 +7,9 @@ import {
   categories,
   listingImages,
   listings,
+  nomenclatureKitGroups,
 } from "@/db/schema";
-import { withoutDemo } from "@/lib/taxonomy";
+import { ancestorChainIds, withoutDemo } from "@/lib/taxonomy";
 
 export type CatalogQuery = {
   q?: string;
@@ -17,13 +18,12 @@ export type CatalogQuery = {
   condition?: string;
   source?: string;
   city?: string;
-  registered?: string;
   availability?: string;
   priceMin?: string;
   priceMax?: string;
   priceSort?: "asc" | "desc";
   page?: string;
-  attrs?: Record<string, { min?: string; max?: string }>;
+  attrs?: Record<string, { min?: string; max?: string; eq?: string }>;
 };
 
 const pageSize = 12;
@@ -63,9 +63,16 @@ export function catalogQueryFromSearchParams(params: URLSearchParams): CatalogQu
   const attrs: NonNullable<CatalogQuery["attrs"]> = {};
   for (const [key, value] of params.entries()) {
     const match = key.match(/^attr_(.+)_(min|max)$/);
-    if (!match || !value) continue;
-    attrs[match[1]] ??= {};
-    attrs[match[1]][match[2] as "min" | "max"] = value;
+    if (match && value) {
+      attrs[match[1]] ??= {};
+      attrs[match[1]][match[2] as "min" | "max"] = value;
+      continue;
+    }
+    const exact = key.match(/^attr_(.+)$/);
+    if (exact && value && !key.endsWith("_min") && !key.endsWith("_max")) {
+      attrs[exact[1]] ??= {};
+      attrs[exact[1]].eq = value;
+    }
   }
   return {
     q: params.get("q") || undefined,
@@ -74,7 +81,6 @@ export function catalogQueryFromSearchParams(params: URLSearchParams): CatalogQu
     condition: params.get("condition") || undefined,
     source: params.get("source") || undefined,
     city: params.get("city") || undefined,
-    registered: params.get("registered") || undefined,
     availability: params.get("availability") || undefined,
     priceMin: params.get("price_min") || undefined,
     priceMax: params.get("price_max") || undefined,
@@ -84,7 +90,7 @@ export function catalogQueryFromSearchParams(params: URLSearchParams): CatalogQu
   };
 }
 
-export async function searchCatalog(query: CatalogQuery) {
+export async function searchCatalog(query: CatalogQuery, options?: { countOnly?: boolean }) {
   await ensureSearch();
   const categoryRows = withoutDemo(await allCategories());
   const conditions: SQL[] = [eq(listings.status, "published")];
@@ -101,16 +107,14 @@ export async function searchCatalog(query: CatalogQuery) {
   if (query.condition === "new" || query.condition === "used") {
     conditions.push(eq(listings.condition, query.condition));
   }
-  if (query.source === "company" || query.source === "individual") {
-    conditions.push(eq(listings.source, query.source));
-  }
   if (query.city) conditions.push(eq(listings.city, query.city));
-  if (query.registered === "yes") conditions.push(eq(listings.registered, true));
-  if (query.registered === "no") conditions.push(eq(listings.registered, false));
   if (query.availability === "stock") conditions.push(eq(listings.onOrder, false));
   if (query.availability === "order") conditions.push(eq(listings.onOrder, true));
   const minRub = Number(query.priceMin);
   const maxRub = Number(query.priceMax);
+  if ((query.priceMin && Number.isFinite(minRub)) || (query.priceMax && Number.isFinite(maxRub))) {
+    conditions.push(sql`${listings.priceKopeks} > 0`);
+  }
   if (query.priceMin && Number.isFinite(minRub)) {
     conditions.push(gte(listings.priceKopeks, Math.round(minRub * 100)));
   }
@@ -124,19 +128,31 @@ export async function searchCatalog(query: CatalogQuery) {
 
   const selected = categoryRows.find((item) => item.slug === query.category);
   const scopeIds = selected ? subtreeIds(categoryRows, selected.slug) : [];
-  const scopedDefs = scopeIds.length
+  const chainIds = selected ? ancestorChainIds(categoryRows, selected.id) : [];
+  const defCategoryIds = [...new Set([...scopeIds, ...chainIds])];
+  const scopedDefs = defCategoryIds.length
     ? await db
         .select()
         .from(attributeDefs)
-        .where(inArray(attributeDefs.categoryId, scopeIds))
+        .where(inArray(attributeDefs.categoryId, defCategoryIds))
         .orderBy(asc(attributeDefs.cardOrder), asc(attributeDefs.name))
     : [];
-  const ownDefs = selected ? scopedDefs.filter((def) => def.categoryId === selected.id && def.filterable) : [];
-  const defs = ownDefs.length
-    ? ownDefs
-    : scopedDefs.filter((def, index, list) => def.filterable && list.findIndex((item) => item.code === def.code) === index);
+  const seen = new Set<string>();
+  const defs: typeof scopedDefs = [];
+  for (const categoryId of chainIds) {
+    for (const def of scopedDefs) {
+      if (def.categoryId !== categoryId || !def.filterable || seen.has(def.code)) continue;
+      seen.add(def.code);
+      defs.push(def);
+    }
+  }
+  for (const def of scopedDefs) {
+    if (!def.filterable || seen.has(def.code) || chainIds.includes(def.categoryId)) continue;
+    seen.add(def.code);
+    defs.push(def);
+  }
   const requested = Object.entries(query.attrs ?? {})
-    .filter(([, range]) => range?.min || range?.max)
+    .filter(([, range]) => range?.min || range?.max || range?.eq)
     .map(([code]) => code)
     .filter((code) => !defs.some((def) => def.code === code));
   if (requested.length) {
@@ -173,6 +189,17 @@ export async function searchCatalog(query: CatalogQuery) {
           and la.value_number <= ${max}
       )`);
     }
+    if (range.eq) {
+      const numeric = Number(range.eq.replace(",", "."));
+      const numberMatch = Number.isFinite(numeric) ? sql`abs(la.value_number - ${numeric}) < 0.0001` : sql`false`;
+      conditions.push(sql`exists (
+        select 1 from listing_attributes la
+        inner join attribute_defs ad on ad.id = la.attribute_def_id
+        where la.listing_id = ${listings.id}
+          and ad.code = ${def.code}
+          and (la.value_text = ${range.eq} or ${numberMatch})
+      )`);
+    }
   }
 
   const where = and(...conditions);
@@ -190,6 +217,20 @@ export async function searchCatalog(query: CatalogQuery) {
     .select({ count: sql<number>`count(*)::int` })
     .from(listings)
     .where(where);
+  const total = totalRow?.count ?? 0;
+  if (options?.countOnly) {
+    return {
+      rows: [],
+      total,
+      page: 1,
+      pages: 1,
+      pageSize,
+      categories: categoryRows,
+      defs,
+      brands: [],
+      cities: [],
+    };
+  }
   const rows = await db.query.listings.findMany({
     where,
     with: {
@@ -202,6 +243,19 @@ export async function searchCatalog(query: CatalogQuery) {
     offset: (page - 1) * pageSize,
   });
 
+  const nomenclatureIds = [...new Set(rows.flatMap((row) => (row.nomenclatureId ? [row.nomenclatureId] : [])))];
+  const kitRows = nomenclatureIds.length
+    ? await db
+        .selectDistinct({ nomenclatureId: nomenclatureKitGroups.nomenclatureId })
+        .from(nomenclatureKitGroups)
+        .where(inArray(nomenclatureKitGroups.nomenclatureId, nomenclatureIds))
+    : [];
+  const withKit = new Set(kitRows.map((row) => row.nomenclatureId));
+  const cards = rows.map((row) => ({
+    ...row,
+    configurable: row.source === "company" && row.nomenclatureId != null && withKit.has(row.nomenclatureId),
+  }));
+
   const brandRows = await db.select().from(brands).orderBy(asc(brands.sort), asc(brands.name));
   const cities = await db
     .selectDistinct({ city: listings.city })
@@ -210,8 +264,8 @@ export async function searchCatalog(query: CatalogQuery) {
     .orderBy(asc(listings.city));
 
   return {
-    rows,
-    total: totalRow?.count ?? 0,
+    rows: cards,
+    total,
     page,
     pages: Math.max(1, Math.ceil((totalRow?.count ?? 0) / pageSize)),
     pageSize,

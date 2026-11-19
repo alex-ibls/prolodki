@@ -11,6 +11,12 @@ export function formatOffer(kopeks: number) {
   return formatRub(kopeks);
 }
 
+export function deliveryTerm(quantity: number, leadTime: string) {
+  if (quantity > 0) return "1 день";
+  const lead = leadTime.trim();
+  return lead || "по запросу";
+}
+
 export function formatCardWhen(value: Date | string) {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return "";

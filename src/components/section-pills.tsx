@@ -20,8 +20,8 @@ export function SectionPills({ items }: { items: { href: string; label: string }
             key={item.href}
             href={item.href}
             aria-current={active ? "page" : undefined}
-            className={`shrink-0 rounded-[9999px] px-3.5 py-1.5 text-sm font-semibold ${
-              active ? "bg-navy text-white" : "border border-line bg-white text-navy"
+            className={`tag shrink-0 px-3.5 py-1.5 text-sm font-semibold ${
+              active ? "bg-navy text-white" : "border border-line bg-white text-ink"
             }`}
           >
             {item.label}

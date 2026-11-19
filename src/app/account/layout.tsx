@@ -22,11 +22,10 @@ async function AccountFrame({ children }: { children: React.ReactNode }) {
           { href: "/account", label: "Профиль" },
           { href: "/account/listings", label: "Объявления" },
           ...(user.staffRole === "manager" ? [{ href: "/account/sales", label: "Продажи" }] : []),
-          { href: "/account/messages", label: "Сообщения" },
         ]}
       />
       {user.emailVerifiedAt ? null : (
-        <p className="mb-6 rounded-3xl border border-navy/20 bg-[#e8f4fc] px-4 py-3 text-sm">
+        <p className="mb-6 rounded-md border border-navy/20 bg-foam px-4 py-3 text-sm">
           На {user.email} отправлено письмо со ссылкой. Подтвердите адрес из письма, чтобы продавать.
         </p>
       )}

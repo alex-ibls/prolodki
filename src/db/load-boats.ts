@@ -5,7 +5,8 @@ import path from "node:path";
 import { eq, inArray, sql } from "drizzle-orm";
 import { client, db } from "./index";
 import { ensureCatalogStructure } from "./catalog-baseline";
-import { attributeDefs, brands, categories, nomenclature, users } from "./schema";
+import { effectiveCharacteristics } from "../lib/characteristics";
+import { brands, categories, nomenclature, users } from "./schema";
 import { readListingDescription } from "../lib/description";
 import { replaceNomenclaturePhotos } from "../lib/photos";
 import { saveNomenclatureItem } from "../lib/nomenclature";
@@ -158,7 +159,7 @@ async function main() {
     if (!category) throw new Error("Категория лодок не найдена");
     const brand = await ensureBrand(row.brand.trim());
     const sku = skuFor(row.model);
-    const defs = await db.select().from(attributeDefs).where(eq(attributeDefs.categoryId, category.id));
+    const defs = await effectiveCharacteristics(category.id);
     const byCode = new Map(defs.map((def) => [def.code, def.id]));
     const numeric: [string, number][] = [
       ["length_m", meters(row.length)],
@@ -183,7 +184,10 @@ async function main() {
     );
     const materialId = byCode.get("material");
     if (!materialId) throw new Error("Нет характеристики material");
-    attributes.push({ attributeDefId: materialId, valueNumber: null, valueText: row.material.trim() });
+    const materialText = row.material.trim();
+    attributes.push({ attributeDefId: materialId, valueNumber: null, valueText: materialText });
+    const bottomMaterialId = byCode.get("bottom_material");
+    if (bottomMaterialId) attributes.push({ attributeDefId: bottomMaterialId, valueNumber: null, valueText: materialText });
     const existing = await db.query.nomenclature.findFirst({ where: eq(nomenclature.sku, sku) });
     const id = await saveNomenclatureItem(manager.id, existing?.id ?? null, {
       sku,
@@ -197,7 +201,6 @@ async function main() {
       priceKopeks: existing?.priceKopeks ?? 0,
       compareAtKopeks: existing?.compareAtKopeks ?? null,
       quantityOnHand: existing ? Math.max(existing.quantityOnHand, existing.quantityReserved) : 1,
-      registered: true,
       onOrder: existing?.onOrder ?? true,
       publish: true,
       attributes,

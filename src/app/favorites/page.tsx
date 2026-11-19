@@ -23,13 +23,13 @@ export default async function FavoritesPage() {
               <Link href={`/product/${item.slug}`} className="flex min-w-0 flex-1 items-center gap-3">
                 {photo ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={`/media/${photo}`} alt="" className="h-16 w-16 shrink-0 rounded-[12px] object-cover" />
+                  <img src={`/media/${photo}`} alt="" className="h-16 w-16 shrink-0 rounded-md object-cover" />
                 ) : (
-                  <span className="h-16 w-16 shrink-0 rounded-[12px] bg-[#ececec]" />
+                  <span className="h-16 w-16 shrink-0 rounded-md bg-foam" />
                 )}
                 <span className="min-w-0">
-                  <span className="block text-[15px] font-bold leading-5 text-[#141414]">{formatOffer(item.priceKopeks)}</span>
-                  <span className="mt-0.5 line-clamp-2 text-[13px] leading-4 text-[#141414]">{item.title}</span>
+                  <span className="block text-[15px] font-bold leading-5 text-deep">{formatOffer(item.priceKopeks)}</span>
+                  <span className="mt-0.5 line-clamp-2 text-[13px] leading-4 text-deep">{item.title}</span>
                 </span>
               </Link>
               <form action={toggleFavoriteAction}>

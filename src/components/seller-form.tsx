@@ -1,4 +1,5 @@
 import { saveListingAction } from "@/actions/store";
+import { BrandModelFields } from "@/components/brand-model-fields";
 import { CategoryFields } from "@/components/category-fields";
 import { CityPlaceField } from "@/components/city-place-field";
 import { LimitedText } from "@/components/limited-text";
@@ -6,28 +7,29 @@ import { PhotoField } from "@/components/photo-field";
 import { RubleInput, TextInput, YearInput } from "@/components/validated-inputs";
 import { buttonClass, inputClass, secondaryClass } from "@/components/styles";
 import { allCategories } from "@/lib/catalog";
-import { defsForCategory } from "@/lib/listings";
-import { allBrands, categoryPath, isLeaf, withoutDemo } from "@/lib/taxonomy";
+import { effectiveCharacteristicsFor } from "@/lib/characteristics";
+import { brandModelChoices, categoryPath, isLeaf, withoutDemo } from "@/lib/taxonomy";
 
 type ListingShape = {
   id: string;
   categoryId: number;
   title: string;
-  brandId: number | null;
+  brand: string;
   model: string;
   year: number | null;
   description: string;
   priceKopeks: number;
   compareAtKopeks: number | null;
+  logisticsKopeks?: number | null;
+  leadTime?: string;
   city: string;
   lat?: number | null;
   lng?: number | null;
-  registered: boolean | null;
   onOrder: boolean;
   quantity: number;
   status: string;
   images?: { id: string; path: string }[];
-  attributes?: { attributeDefId: number; valueNumber: number | null; valueText?: string | null; definition?: { code: string } }[];
+  attributes?: { attributeDefId: number; valueNumber: number | null; valueText?: string | null; definition?: { code: string; dataType?: string } }[];
 };
 
 export async function SellerForm({
@@ -38,19 +40,24 @@ export async function SellerForm({
   error?: string;
 }) {
   const categories = withoutDemo(await allCategories());
-  const brands = withoutDemo(await allBrands());
+  const choices = await brandModelChoices(false);
   const leaves = categories
     .filter((category) => isLeaf(categories, category.id))
     .sort((a, b) => categoryPath(categories, a.id).localeCompare(categoryPath(categories, b.id), "ru"));
-  const groups: Record<string, { code: string; name: string; unit: string }[]> = {};
+  const groups: Record<string, { code: string; name: string; unit: string; dataType: string }[]> = {};
+  const defsByCategory = await effectiveCharacteristicsFor(leaves.map((leaf) => leaf.id));
   for (const leaf of leaves) {
-    const defs = await defsForCategory(leaf.id);
-    groups[String(leaf.id)] = defs.map((def) => ({ code: def.code, name: def.name, unit: def.unit }));
+    groups[String(leaf.id)] = (defsByCategory.get(leaf.id) ?? []).map((def) => ({
+      code: def.code,
+      name: def.name,
+      unit: def.unit,
+      dataType: def.dataType,
+    }));
   }
   const values: Record<string, string> = {};
   for (const attr of listing?.attributes ?? []) {
     if (!attr.definition) continue;
-    if (attr.definition.code === "material" && attr.valueText) values[attr.definition.code] = attr.valueText;
+    if (attr.definition.dataType === "text" && attr.valueText) values[attr.definition.code] = attr.valueText;
     else if (attr.valueNumber !== null) values[attr.definition.code] = String(attr.valueNumber);
   }
   const locked = listing?.status === "reserved" || listing?.status === "archived";
@@ -73,21 +80,13 @@ export async function SellerForm({
         <TextInput name="title" required min={3} defaultValue={listing?.title} disabled={locked} />
       </label>
       <div className="grid gap-3 md:grid-cols-2">
-        <label className="text-sm">
-          Бренд
-          <select name="brandId" defaultValue={listing?.brandId ?? ""} className={inputClass}>
-            <option value="">Не указан</option>
-            {brands.map((brand) => (
-              <option key={brand.id} value={brand.id}>
-                {brand.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-sm">
-          Модель
-          <TextInput name="model" defaultValue={listing?.model} />
-        </label>
+        <BrandModelFields
+          brands={choices.brands}
+          models={choices.models}
+          brand={listing?.brand}
+          model={listing?.model}
+          disabled={locked}
+        />
         <label className="text-sm">
           Год
           <YearInput name="year" defaultValue={listing?.year == null ? "" : String(listing.year)} />
@@ -100,16 +99,27 @@ export async function SellerForm({
           disabled={locked}
         />
         <label className="text-sm">
-          Регистрация
-          <select name="registered" required defaultValue={listing?.registered == null ? "" : listing.registered ? "yes" : "no"} className={inputClass} disabled={locked}>
-            <option value="">Выберите</option>
-            <option value="yes">Регистрат</option>
-            <option value="no">Нерегистрат</option>
-          </select>
-        </label>
-        <label className="text-sm">
           Цена, ₽
           <RubleInput name="price" required defaultValue={listing ? String(listing.priceKopeks / 100) : ""} />
+        </label>
+        <label className="text-sm">
+          Логистика до дилерского центра в Москве, ₽
+          <RubleInput
+            name="logistics"
+            disabled={locked}
+            defaultValue={listing?.logisticsKopeks ? String(listing.logisticsKopeks / 100) : ""}
+          />
+        </label>
+        <label className="text-sm md:col-span-2">
+          Срок поставки (ориентировочно)
+          <input
+            name="leadTime"
+            maxLength={80}
+            placeholder="по запросу"
+            defaultValue={listing?.leadTime ?? ""}
+            disabled={locked}
+            className={inputClass}
+          />
         </label>
         <p className="text-sm text-muted">Объявление на доске: лодка БУ. Покупатель напишет или позвонит.</p>
       </div>

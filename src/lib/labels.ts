@@ -15,13 +15,6 @@ export function readOnOrder(raw: string) {
   return null;
 }
 
-export function readRegistered(raw: string) {
-  const value = raw.trim().toLocaleLowerCase("ru");
-  if (["1", "yes", "true", "регистрат"].includes(value)) return true;
-  if (["0", "no", "false", "нерегистрат"].includes(value)) return false;
-  return null;
-}
-
 export const listingStatusLabel = {
   draft: "Черновик",
   pending_review: "На модерации",

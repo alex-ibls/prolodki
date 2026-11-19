@@ -4,19 +4,25 @@ import {
   favorites,
   listingEvents,
   listingImages,
-  listingMessages,
-  listingThreads,
   listings,
   orders,
-  users,
   viewHistory,
 } from "@/db/schema";
-import { isListingSeller } from "@/lib/messages";
 import { mergeGuestCart } from "@/lib/cart";
 import { ensureGuestToken, readGuestToken } from "@/lib/guest";
 import { getCurrentUser } from "@/lib/session";
 
 const VIEW_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+function isListingSeller(
+  user: { id: string; staffRole: string | null } | null,
+  listing: { sellerUserId: string | null; organizationId: string | null },
+) {
+  if (!user) return false;
+  if (listing.sellerUserId && listing.sellerUserId === user.id) return true;
+  if (!listing.sellerUserId && user.staffRole === "manager" && listing.organizationId) return true;
+  return false;
+}
 
 export type ListingStat = {
   view: number;
@@ -283,35 +289,6 @@ export async function claimGuestSession(userId: string, guestToken: string | nul
         .update(viewHistory)
         .set({ userId, guestToken: null })
         .where(eq(viewHistory.id, row.id));
-    }
-  }
-  const account = await db.query.users.findFirst({
-    where: eq(users.id, userId),
-    columns: { id: true, staffRole: true },
-  });
-  const threads = await db.select().from(listingThreads).where(eq(listingThreads.guestToken, guestToken));
-  for (const thread of threads) {
-    const listing = await db.query.listings.findFirst({
-      where: eq(listings.id, thread.listingId),
-      columns: { sellerUserId: true, organizationId: true },
-    });
-    if (!listing || (account && isListingSeller(account, listing))) continue;
-    const [own] = await db
-      .select({ id: listingThreads.id })
-      .from(listingThreads)
-      .where(and(eq(listingThreads.listingId, thread.listingId), eq(listingThreads.buyerUserId, userId)))
-      .limit(1);
-    if (own) {
-      await db
-        .update(listingMessages)
-        .set({ threadId: own.id })
-        .where(eq(listingMessages.threadId, thread.id));
-      await db.delete(listingThreads).where(eq(listingThreads.id, thread.id));
-    } else {
-      await db
-        .update(listingThreads)
-        .set({ buyerUserId: userId, guestToken: null })
-        .where(eq(listingThreads.id, thread.id));
     }
   }
 }

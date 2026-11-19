@@ -5,23 +5,25 @@ import { usePathname } from "next/navigation";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { crumbsForPath } from "@/lib/breadcrumbs";
 
+type CrumbLabel = { label: string; href?: string };
+
 const CrumbTitleContext = createContext<{
-  title: string | null;
-  setTitle: (title: string | null) => void;
+  title: CrumbLabel | null;
+  setTitle: (title: CrumbLabel | null) => void;
 } | null>(null);
 
 export function CrumbProvider({ children }: { children: React.ReactNode }) {
-  const [title, setTitle] = useState<string | null>(null);
+  const [title, setTitle] = useState<CrumbLabel | null>(null);
   const value = useMemo(() => ({ title, setTitle }), [title]);
   return <CrumbTitleContext.Provider value={value}>{children}</CrumbTitleContext.Provider>;
 }
 
-export function CrumbTitle({ label }: { label: string }) {
+export function CrumbTitle({ label, href }: { label: string; href?: string }) {
   const setTitle = useContext(CrumbTitleContext)?.setTitle;
   useEffect(() => {
-    setTitle?.(label);
+    setTitle?.({ label, href });
     return () => setTitle?.(null);
-  }, [setTitle, label]);
+  }, [setTitle, label, href]);
   return null;
 }
 
@@ -30,7 +32,10 @@ export function BreadcrumbBar({ names = {} }: { names?: Record<string, string> }
   const title = useContext(CrumbTitleContext)?.title ?? null;
   const crumbs = crumbsForPath(pathname, names);
   if (crumbs.length < 2) return null;
-  if (title) crumbs[crumbs.length - 1] = { ...crumbs[crumbs.length - 1], label: title };
+  if (title) {
+    const index = title.href ? crumbs.findIndex((crumb) => crumb.href === title.href) : crumbs.length - 1;
+    if (index >= 0) crumbs[index] = { ...crumbs[index], label: title.label };
+  }
   return (
     <nav aria-label="Хлебные крошки" className="mx-auto w-full max-w-6xl px-3 pt-2 text-xs sm:px-4 sm:pt-3 sm:text-sm">
       <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-muted">

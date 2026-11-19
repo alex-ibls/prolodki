@@ -136,6 +136,7 @@ export const attributeDefs = pgTable("attribute_defs", {
   unit: text("unit").notNull().default(""),
   filterable: boolean("filterable").notNull().default(true),
   cardOrder: integer("card_order").notNull().default(0),
+  dataType: text("data_type").notNull().default("number"),
 });
 
 export const nomenclature = pgTable("nomenclature", {
@@ -152,10 +153,11 @@ export const nomenclature = pgTable("nomenclature", {
   description: text("description").notNull().default(""),
   priceKopeks: integer("price_kopeks").notNull(),
   compareAtKopeks: integer("compare_at_kopeks"),
+  logisticsKopeks: integer("logistics_kopeks"),
+  leadTime: text("lead_time").notNull().default(""),
   quantityOnHand: integer("quantity_on_hand").notNull().default(0),
   quantityReserved: integer("quantity_reserved").notNull().default(0),
   city: text("city").notNull().default(""),
-  registered: boolean("registered"),
   onOrder: boolean("on_order").notNull().default(false),
   isPublished: boolean("is_published").notNull().default(false),
   createdAt: timestamps.createdAt,
@@ -198,10 +200,11 @@ export const listings = pgTable("listings", {
   condition: itemCondition("condition").notNull(),
   priceKopeks: integer("price_kopeks").notNull(),
   compareAtKopeks: integer("compare_at_kopeks"),
+  logisticsKopeks: integer("logistics_kopeks"),
+  leadTime: text("lead_time").notNull().default(""),
   city: text("city").notNull().default(""),
   lat: doublePrecision("lat"),
   lng: doublePrecision("lng"),
-  registered: boolean("registered"),
   onOrder: boolean("on_order").notNull().default(false),
   quantity: integer("quantity").notNull().default(1),
   status: listingStatus("status").notNull().default("draft"),
@@ -210,6 +213,39 @@ export const listings = pgTable("listings", {
   createdAt: timestamps.createdAt,
   updatedAt: timestamps.updatedAt,
 }, (table) => [index("listings_search_idx").using("gin", table.searchVector)]);
+
+export const kitItems = pgTable("kit_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  kind: text("kind").notNull(),
+  name: text("name").notNull(),
+  priceKopeks: integer("price_kopeks").notNull(),
+  imagePath: text("image_path").notNull().default(""),
+  createdAt: timestamps.createdAt,
+});
+
+export const nomenclatureKitGroups = pgTable("nomenclature_kit_groups", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  nomenclatureId: uuid("nomenclature_id")
+    .notNull()
+    .references(() => nomenclature.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(),
+  name: text("name").notNull(),
+  sort: integer("sort").notNull().default(0),
+});
+
+export const nomenclatureKitLinks = pgTable(
+  "nomenclature_kit_links",
+  {
+    groupId: uuid("group_id")
+      .notNull()
+      .references(() => nomenclatureKitGroups.id, { onDelete: "cascade" }),
+    itemId: uuid("item_id")
+      .notNull()
+      .references(() => kitItems.id),
+    sort: integer("sort").notNull().default(0),
+  },
+  (table) => [primaryKey({ columns: [table.groupId, table.itemId] })],
+);
 
 export const listingAttributes = pgTable(
   "listing_attributes",
@@ -284,6 +320,7 @@ export const cartItems = pgTable(
       .notNull()
       .references(() => listings.id),
     qty: integer("qty").notNull(),
+    options: text("options").notNull().default(""),
   },
   (table) => [primaryKey({ columns: [table.cartId, table.listingId] })],
 );
@@ -318,6 +355,7 @@ export const orderItems = pgTable("order_items", {
   title: text("title").notNull(),
   priceKopeks: integer("price_kopeks").notNull(),
   qty: integer("qty").notNull(),
+  options: text("options").notNull().default(""),
   lineStatus: lineStatus("line_status").notNull().default("placed"),
 });
 
@@ -407,37 +445,6 @@ export const viewHistory = pgTable(
   ],
 );
 
-export const listingThreads = pgTable(
-  "listing_threads",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    listingId: uuid("listing_id")
-      .notNull()
-      .references(() => listings.id),
-    buyerUserId: uuid("buyer_user_id").references(() => users.id),
-    guestToken: text("guest_token"),
-    contactName: text("contact_name").notNull(),
-    createdAt: timestamps.createdAt,
-    updatedAt: timestamps.updatedAt,
-  },
-  (table) => [
-    index("listing_threads_listing_idx").on(table.listingId),
-    uniqueIndex("listing_threads_buyer_listing").on(table.listingId, table.buyerUserId),
-    uniqueIndex("listing_threads_guest_listing").on(table.listingId, table.guestToken),
-  ],
-);
-
-export const listingMessages = pgTable("listing_messages", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  threadId: uuid("thread_id")
-    .notNull()
-    .references(() => listingThreads.id),
-  body: text("body").notNull(),
-  fromSeller: boolean("from_seller").notNull().default(false),
-  authorUserId: uuid("author_user_id").references(() => users.id),
-  createdAt: timestamps.createdAt,
-});
-
 export const outboundEmails = pgTable("outbound_emails", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id")
@@ -512,25 +519,6 @@ export const listingsRelations = relations(listings, ({ one, many }) => ({
   organization: one(organizations, {
     fields: [listings.organizationId],
     references: [organizations.id],
-  }),
-}));
-
-export const listingThreadsRelations = relations(listingThreads, ({ one, many }) => ({
-  listing: one(listings, {
-    fields: [listingThreads.listingId],
-    references: [listings.id],
-  }),
-  buyer: one(users, {
-    fields: [listingThreads.buyerUserId],
-    references: [users.id],
-  }),
-  messages: many(listingMessages),
-}));
-
-export const listingMessagesRelations = relations(listingMessages, ({ one }) => ({
-  thread: one(listingThreads, {
-    fields: [listingMessages.threadId],
-    references: [listingThreads.id],
   }),
 }));
 

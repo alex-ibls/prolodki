@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
-import { Inter, Manrope } from "next/font/google";
+import { Inter_Tight } from "next/font/google";
 import { BreadcrumbBar, CrumbProvider } from "@/components/breadcrumbs";
 import { SiteFooter, SiteHeaderSlot } from "@/components/shell";
 import { allCategories } from "@/lib/catalog";
 import { site } from "@/lib/site";
 import "./globals.css";
 
-const sans = Inter({ subsets: ["cyrillic", "latin"], variable: "--font-inter" });
-const display = Manrope({ subsets: ["cyrillic", "latin"], variable: "--font-manrope" });
+const sans = Inter_Tight({ subsets: ["cyrillic", "latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
@@ -18,7 +17,7 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const names = Object.fromEntries((await allCategories()).map((item) => [item.slug, item.name]));
   return (
-    <html lang="ru" className={`${sans.variable} ${display.variable} h-full`}>
+    <html lang="ru" className={`${sans.variable} h-full`}>
       <body className="flex min-h-full flex-col bg-paper antialiased">
         <CrumbProvider>
           <SiteHeaderSlot />

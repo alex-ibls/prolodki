@@ -50,7 +50,6 @@ async function main() {
         quantityOnHand: Math.max(1, source.quantityOnHand),
         quantityReserved: 0,
         city: source.city,
-        registered: source.registered,
         onOrder: source.onOrder,
         isPublished: true,
       })

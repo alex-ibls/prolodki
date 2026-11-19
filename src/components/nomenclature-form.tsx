@@ -1,50 +1,58 @@
 import { saveNomenclatureAction } from "@/actions/admin";
+import { BrandModelFields } from "@/components/brand-model-fields";
+import { KitEditor } from "@/components/kit-editor";
 import { CategoryFields } from "@/components/category-fields";
 import { LimitedText } from "@/components/limited-text";
 import { PhotoField } from "@/components/photo-field";
 import { buttonClass, inputClass } from "@/components/styles";
 import { allCategories } from "@/lib/catalog";
-import { defsForCategory } from "@/lib/listings";
-import { allBrands, categoryPath, isLeaf } from "@/lib/taxonomy";
+import { effectiveCharacteristicsFor } from "@/lib/characteristics";
+import { kitForNomenclature, listKitLibrary } from "@/lib/kit";
+import { brandModelChoices, categoryPath, isLeaf } from "@/lib/taxonomy";
 
 type Item = {
   id: string;
   sku: string;
   categoryId: number;
   title: string;
-  brandId: number | null;
+  brand: string;
   model: string;
   year: number | null;
-  registered: boolean | null;
   onOrder: boolean;
   description: string;
   priceKopeks: number;
   compareAtKopeks: number | null;
+  logisticsKopeks?: number | null;
+  leadTime?: string;
   quantityOnHand: number;
   quantityReserved: number;
   isPublished: boolean;
-  attributes?: { valueNumber: number | null; valueText?: string | null; definition?: { code: string } }[];
+  attributes?: { valueNumber: number | null; valueText?: string | null; definition?: { code: string; dataType?: string } }[];
   images?: { id: string; path: string }[];
 };
 
 export async function NomenclatureForm({ item, error }: { item?: Item; error?: string }) {
   const categories = await allCategories();
-  const brands = await allBrands();
+  const choices = await brandModelChoices(true);
+  const library = await listKitLibrary();
+  const kit = item ? await kitForNomenclature(item.id) : [];
   const leaves = categories
     .filter((category) => isLeaf(categories, category.id))
     .sort((a, b) => categoryPath(categories, a.id).localeCompare(categoryPath(categories, b.id), "ru"));
-  const groups: Record<string, { code: string; name: string; unit: string }[]> = {};
+  const groups: Record<string, { code: string; name: string; unit: string; dataType: string }[]> = {};
+  const defsByCategory = await effectiveCharacteristicsFor(leaves.map((leaf) => leaf.id));
   for (const leaf of leaves) {
-    groups[String(leaf.id)] = (await defsForCategory(leaf.id)).map((def) => ({
+    groups[String(leaf.id)] = (defsByCategory.get(leaf.id) ?? []).map((def) => ({
       code: def.code,
       name: def.name,
       unit: def.unit,
+      dataType: def.dataType,
     }));
   }
   const values: Record<string, string> = {};
   for (const attr of item?.attributes ?? []) {
     if (!attr.definition) continue;
-    if (attr.definition.code === "material" && attr.valueText) values[attr.definition.code] = attr.valueText;
+    if (attr.definition.dataType === "text" && attr.valueText) values[attr.definition.code] = attr.valueText;
     else if (attr.valueNumber !== null) values[attr.definition.code] = String(attr.valueNumber);
   }
   return (
@@ -60,32 +68,10 @@ export async function NomenclatureForm({ item, error }: { item?: Item; error?: s
           Название
           <input name="title" required defaultValue={item?.title} className={inputClass} />
         </label>
-        <label className="text-sm">
-          Бренд
-          <select name="brandId" defaultValue={item?.brandId ?? ""} className={inputClass}>
-            <option value="">Не указан</option>
-            {brands.map((brand) => (
-              <option key={brand.id} value={brand.id}>
-                {brand.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-sm">
-          Модель
-          <input name="model" defaultValue={item?.model} className={inputClass} />
-        </label>
+        <BrandModelFields brands={choices.brands} models={choices.models} brand={item?.brand} model={item?.model} />
         <label className="text-sm">
           Год
           <input name="year" defaultValue={item?.year ?? ""} className={inputClass} />
-        </label>
-        <label className="text-sm">
-          Регистрация
-          <select name="registered" required defaultValue={item?.registered == null ? "" : item.registered ? "yes" : "no"} className={inputClass}>
-            <option value="">Выберите</option>
-            <option value="yes">Регистрат</option>
-            <option value="no">Нерегистрат</option>
-          </select>
         </label>
         <label className="text-sm">
           Наличие
@@ -101,6 +87,26 @@ export async function NomenclatureForm({ item, error }: { item?: Item; error?: s
         <label className="text-sm">
           Старая цена, ₽
           <input name="compareAt" defaultValue={item?.compareAtKopeks ? item.compareAtKopeks / 100 : ""} className={inputClass} />
+        </label>
+        <label className="text-sm">
+          Логистика до дилерского центра в Москве, ₽
+          <input
+            name="logistics"
+            inputMode="decimal"
+            placeholder="по запросу"
+            defaultValue={item?.logisticsKopeks ? item.logisticsKopeks / 100 : ""}
+            className={inputClass}
+          />
+        </label>
+        <label className="text-sm md:col-span-2">
+          Срок поставки (ориентировочно)
+          <input
+            name="leadTime"
+            maxLength={80}
+            placeholder="по запросу"
+            defaultValue={item?.leadTime ?? ""}
+            className={inputClass}
+          />
         </label>
         <label className="text-sm">
           Остаток на складе
@@ -123,6 +129,7 @@ export async function NomenclatureForm({ item, error }: { item?: Item; error?: s
         <LimitedText name="description" defaultValue={item?.description} />
       </div>
       <PhotoField images={item?.images} />
+      <KitEditor library={library} initial={kit} />
       <label className="flex items-center gap-2 text-sm">
         <input name="publish" type="checkbox" defaultChecked={item?.isPublished ?? true} />
         Опубликовать на витрине

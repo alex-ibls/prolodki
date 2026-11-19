@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { formatCardWhen, formatOffer, formatPhone, formatRub } from "@/lib/format";
+import { CartIcon } from "@/components/action-icons";
+import { actionClass } from "@/components/styles";
+import { formatOffer, formatPhone, formatRub } from "@/lib/format";
+import { catalogHref } from "@/lib/sef";
 import { site } from "@/lib/site";
 
 type SpecSource = {
@@ -14,16 +17,17 @@ export type CardData = {
   priceKopeks: number;
   compareAtKopeks: number | null;
   city: string;
-  registered: boolean | null;
   quantity: number;
   condition: "new" | "used";
   onOrder: boolean;
   source: "company" | "individual";
   images: { path: string }[];
   attributes: SpecSource[];
-  category?: { name: string } | null;
+  category?: { name: string; slug?: string; href?: string } | null;
+  brand?: string;
   createdAt?: Date | string | null;
   phone?: string | null;
+  configurable?: boolean;
 };
 
 export function specsOf(item: { attributes: SpecSource[] }) {
@@ -32,24 +36,56 @@ export function specsOf(item: { attributes: SpecSource[] }) {
     .sort((a, b) => a.definition.cardOrder - b.definition.cardOrder);
 }
 
-export function registeredSpec(registered: boolean | null) {
-  if (registered == null) return null;
-  return {
-    key: "registered",
-    code: registered ? "registered" : "unregistered",
-    label: "Регистрация",
-    value: registered ? "Регистрат" : "Нерегистрат",
-  };
-}
-
 export function specValue(spec: SpecSource) {
   if (spec.valueText?.trim()) return spec.valueText.trim();
   const unit = !spec.definition.unit ? "" : spec.definition.unit === "°" ? spec.definition.unit : ` ${spec.definition.unit}`;
   return `${spec.valueNumber}${unit}`;
 }
 
-function SpecIcon({ code }: { code: string }) {
-  const common = { viewBox: "0 0 24 24", className: "h-4 w-4", fill: "none", stroke: "currentColor", strokeWidth: 1.75, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true };
+const highlightCaptions: Record<string, string> = {
+  length_m: "метра",
+  width_m: "метра",
+  seats: "чел.",
+  max_hp: "л.с.",
+  passengers: "пассажира",
+};
+
+export function highlightSpecs(item: { attributes: SpecSource[] }) {
+  return specsOf(item).filter((spec) => spec.definition.cardOrder <= 4 || spec.definition.code === "passengers");
+}
+
+export function HighlightSpecs({ items }: { items: SpecSource[] }) {
+  if (items.length === 0) return null;
+  const columns =
+    items.length >= 5
+      ? "grid-cols-5"
+      : items.length === 4
+        ? "grid-cols-4"
+        : items.length === 3
+          ? "grid-cols-3"
+          : items.length === 2
+            ? "grid-cols-2"
+            : "grid-cols-1";
+  return (
+    <ul className={`-mx-3 grid ${columns} divide-x divide-white/15 bg-deep text-white sm:mx-0 sm:rounded-t-2xl`}>
+      {items.map((spec) => {
+        const numeric = spec.valueNumber !== null && !spec.valueText?.trim();
+        const value = numeric ? String(spec.valueNumber) : specValue(spec);
+        const caption = highlightCaptions[spec.definition.code] || spec.definition.unit || spec.definition.name;
+        return (
+          <li key={spec.definition.code} className="flex min-w-0 flex-col items-center gap-1 px-1 py-3 text-center sm:px-2">
+            <SpecIcon code={spec.definition.code} className="h-5 w-5 sm:h-6 sm:w-6" />
+            <span className="font-display text-lg font-extrabold leading-none sm:text-xl">{value}</span>
+            <span className="text-[11px] leading-4 sm:text-xs">{numeric ? caption : spec.definition.name}</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function SpecIcon({ code, className = "h-4 w-4" }: { code: string; className?: string }) {
+  const common = { viewBox: "0 0 24 24", className, fill: "none", stroke: "currentColor", strokeWidth: 1.75, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true };
   if (code === "length_m") {
     return (
       <svg {...common}>
@@ -64,7 +100,7 @@ function SpecIcon({ code }: { code: string }) {
       </svg>
     );
   }
-  if (code === "seats") {
+  if (code === "seats" || code === "passengers") {
     return (
       <svg {...common}>
         <circle cx="12" cy="8" r="3" />
@@ -110,15 +146,6 @@ function SpecIcon({ code }: { code: string }) {
       </svg>
     );
   }
-  if (code === "registered" || code === "unregistered") {
-    return (
-      <svg {...common}>
-        <rect x="5" y="3" width="14" height="18" rx="2" />
-        <path d="M8 8h8M8 12h8" />
-        {code === "registered" ? <path d="M8 16h4" /> : <path d="M8 16l8-8" />}
-      </svg>
-    );
-  }
   return (
     <svg {...common}>
       <circle cx="12" cy="12" r="7" />
@@ -132,7 +159,7 @@ export function SpecGrid({ items }: { items: { key: string; code: string; label:
     <ul className="grid grid-cols-2 gap-x-3 gap-y-3">
       {items.map((item) => (
         <li key={item.key} className="flex min-w-0 items-center gap-2">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-paper text-navy">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-paper text-navy">
             <SpecIcon code={item.code} />
           </span>
           <span className="min-w-0">
@@ -147,49 +174,80 @@ export function SpecGrid({ items }: { items: { key: string; code: string; label:
 
 export function ProductCard({ item }: { item: CardData }) {
   const photo = item.images[0]?.path;
-  const place = item.condition === "used" && item.source === "individual" ? item.city.trim() : "";
-  const when = item.createdAt ? formatCardWhen(item.createdAt) : "";
-  const meta = [place, when].filter(Boolean).join(" · ");
+  const specs = ["length_m", "width_m", "max_hp"]
+    .map((code) => cardSpec(item, code))
+    .filter((value) => value !== "");
   return (
-    <article className="min-w-0">
-      <Link href={`/product/${item.slug}`} className="block">
-        <span className="relative block overflow-hidden rounded-[16px] bg-foam">
+    <article className="flex h-full min-w-0 flex-col bg-white">
+      <Link href={`/product/${item.slug}`} className="flex flex-1 flex-col">
+        <span className="relative block overflow-hidden bg-foam">
           {photo ? (
             // Local uploads are served by the app route and are not part of the image optimizer.
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={`/media/${photo}`} alt="" className="aspect-square w-full object-cover" />
+            <img src={`/media/${photo}`} alt="" className="aspect-[4/3] w-full object-cover" />
           ) : (
-            <span className="flex aspect-square items-end bg-navy p-3 text-sm font-semibold text-white">{item.category?.name}</span>
+            <span className="flex aspect-[4/3] items-end bg-deep p-3 text-sm font-semibold text-white">{item.category?.name}</span>
           )}
+          <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-3 pb-3 pt-10 text-xl font-bold leading-none text-white">
+            {formatOffer(item.priceKopeks)}
+          </span>
           {item.condition === "used" ? (
-            <span className="absolute bottom-2 left-2 rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] font-medium text-white">
-              БУ
-            </span>
+            <span className="absolute left-2 top-2 bg-black/70 px-1.5 py-0.5 text-[11px] font-medium text-white">БУ</span>
           ) : null}
         </span>
-        <span className="mt-1.5 block">
-          <span className="flex flex-wrap items-baseline gap-x-1.5">
-            <span className="text-[15px] font-bold leading-5 text-deep">{formatOffer(item.priceKopeks)}</span>
-            {item.compareAtKopeks && item.compareAtKopeks > item.priceKopeks ? (
-              <span className="text-xs text-[#757575] line-through">{formatRub(item.compareAtKopeks)}</span>
-            ) : null}
-          </span>
-          <span className="mt-0.5 line-clamp-2 text-[13px] leading-4 text-ink">{item.title}</span>
-          {meta ? <span className="mt-1 block truncate text-xs leading-4 text-[#757575]">{meta}</span> : null}
+        <span className="block flex-1 px-3 pt-3">
+          <span className="line-clamp-2 text-base font-semibold leading-5 text-deep">{item.title}</span>
+          {item.brand ? <span className="mt-1 block truncate text-sm text-muted">{item.brand}</span> : null}
+          {item.compareAtKopeks && item.compareAtKopeks > item.priceKopeks ? (
+            <span className="mt-1 block text-xs text-muted line-through">{formatRub(item.compareAtKopeks)}</span>
+          ) : null}
         </span>
+        {specs.length ? (
+          <span className="flex items-center gap-3 border-t border-line px-3 py-2 text-xs text-muted">
+            {specs.map((value) => (
+              <span key={value}>{value}</span>
+            ))}
+          </span>
+        ) : (
+          <span className="block border-t border-line" />
+        )}
       </Link>
+      {item.configurable ? (
+        <Link href={`/product/${item.slug}/configurator`} className={`${actionClass} w-full`} style={{ borderRadius: 0 }}>
+          <CartIcon />
+          Купить
+        </Link>
+      ) : null}
+      {item.category?.name && item.category.href ? (
+        <Link href={item.category.href} className="block bg-foam px-3 py-2 text-sm text-ink hover:bg-paper hover:text-navy">
+          {item.category.name}
+        </Link>
+      ) : null}
     </article>
   );
 }
 
-export function listingCard(item: CardData): CardData {
+function categoryLink(category: CardData["category"], paths: Record<string, string>) {
+  if (!category?.name) return null;
+  const href = category.href || (category.slug ? catalogHref(new URLSearchParams({ category: category.slug }), paths) : "");
+  if (!href) return null;
+  return { name: category.name, href };
+}
+
+function cardSpec(item: CardData, code: string) {
+  const spec = item.attributes.find((attr) => attr.definition.code === code);
+  if (!spec || spec.valueNumber === null) return "";
+  const unit = spec.definition.unit && spec.definition.unit !== "°" ? ` ${spec.definition.unit}` : "";
+  return `${spec.valueNumber}${unit}`;
+}
+
+export function listingCard(item: CardData, paths: Record<string, string> = {}): CardData {
   return {
     slug: item.slug,
     title: item.title,
     priceKopeks: item.priceKopeks,
     compareAtKopeks: item.compareAtKopeks,
     city: item.city,
-    registered: item.registered,
     quantity: item.quantity,
     condition: item.condition,
     onOrder: item.onOrder,
@@ -205,8 +263,10 @@ export function listingCard(item: CardData): CardData {
         cardOrder: attr.definition.cardOrder,
       },
     })),
-    category: item.category ? { name: item.category.name } : null,
+    category: categoryLink(item.category, paths),
+    brand: item.brand,
     createdAt: item.createdAt,
+    configurable: item.configurable === true,
   };
 }
 
@@ -227,7 +287,7 @@ export function ProductGrid({ items }: { items: CardData[] }) {
     return <p className="text-muted">В этой подборке пока нет объявлений.</p>;
   }
   return (
-    <div className="grid grid-cols-2 gap-x-2 gap-y-4 sm:gap-x-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
       {items.map((item) => (
         <ProductCard key={item.slug} item={item} />
       ))}

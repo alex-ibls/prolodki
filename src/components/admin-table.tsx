@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { adminHref, type AdminBulkOption, type AdminColumn, type AdminFilter, type AdminRow } from "@/lib/admin-list";
-import { secondaryClass } from "@/components/styles";
+import { buttonClass, secondaryClass } from "@/components/styles";
 
 export function AdminTable({
   title,
@@ -102,7 +102,7 @@ export function AdminTable({
             </select>
           </label>
         ))}
-        <button className="btn bg-navy px-4 py-2 text-sm font-semibold text-white">Найти</button>
+        <button className={buttonClass}>Найти</button>
         <Link href={basePath} className={secondaryClass}>
           Сбросить
         </Link>
@@ -111,7 +111,7 @@ export function AdminTable({
         <input type="hidden" name="back" value={back} />
         <div className="overflow-x-auto rounded-2xl border border-line bg-card">
           <table className="w-full min-w-[720px] border-collapse text-left text-sm">
-            <thead className="bg-[#f4f8fc] text-muted">
+            <thead className="bg-foam text-muted">
               <tr>
                 <th className="w-10 px-3 py-3">
                   <input
@@ -202,7 +202,7 @@ export function AdminTable({
               <input name="reason" required className="field mt-1 w-full border border-line bg-white px-3 py-2 text-sm outline-none focus:border-navy" />
             </label>
           ) : null}
-          <button className="btn bg-copper px-4 py-2 text-sm font-semibold text-white disabled:opacity-60" disabled={picked.length === 0}>
+          <button className={buttonClass} disabled={picked.length === 0}>
             Применить
           </button>
           <a href={excel} className={secondaryClass}>

@@ -117,7 +117,6 @@ async function main() {
       condition: index % 2 === 0 ? "used" : "new",
       priceKopeks: (120_000 + index * 8_000) * 100,
       city: cities[index % cities.length],
-      registered: index % 2 === 0,
       onOrder: false,
       quantity: 1,
       status,

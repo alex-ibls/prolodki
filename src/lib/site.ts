@@ -1,7 +1,7 @@
 export const site = {
-  name: "По Волнам",
-  domain: "По-волнам.рф",
-  url: "https://xn----8sbf0bgedcf.xn--p1ai",
+  name: "Катер-Центр",
+  domain: "Катер-центр.рф",
+  url: "https://xn----7sbpbvwsdmf5b.xn--p1ai",
   tagline: "Лодки, катера и яхты",
   phone: "+7 (495) 120-40-40",
   phoneHref: "+74951204040",

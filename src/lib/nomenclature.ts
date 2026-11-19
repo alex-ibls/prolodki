@@ -4,8 +4,8 @@ import { categories, nomenclature, stockMovements } from "@/db/schema";
 import { csvRecords } from "@/lib/csv";
 import { readListingDescription } from "@/lib/description";
 import { DomainError } from "@/lib/errors";
-import { parseIntStrict, parsePriceToKopeks } from "@/lib/format";
-import { readOnOrder, readRegistered } from "@/lib/labels";
+import { parseIntStrict, parsePriceToKopeks, textInputLimit } from "@/lib/format";
+import { readOnOrder } from "@/lib/labels";
 import { availableOf, replaceNomenclatureAttributes, syncPublishedListing, writeStockMovement } from "@/lib/stock";
 import { assertLeafCategory, resolveBrandName } from "@/lib/taxonomy";
 
@@ -112,15 +112,12 @@ async function applyFull(userId: string, record: Record<string, string>) {
     city: "",
     updatedAt: new Date(),
   };
-  const registeredRaw = record.registered?.trim() ?? "";
-  const registered = registeredRaw ? readRegistered(registeredRaw) : null;
-  if (registeredRaw && registered === null) throw new DomainError("Регистрация указана неверно: регистрат или нерегистрат");
   const onOrderRaw = record.on_order?.trim() || record.availability?.trim() || "";
   const onOrder = onOrderRaw ? readOnOrder(onOrderRaw) : null;
   if (onOrderRaw && onOrder === null) throw new DomainError("Наличие указано неверно: в наличии или на заказ");
 
   if (!existing) {
-    const [created] = await db.insert(nomenclature).values({ ...values, registered, onOrder: onOrder ?? false }).returning();
+    const [created] = await db.insert(nomenclature).values({ ...values, onOrder: onOrder ?? false }).returning();
     await db.insert(stockMovements).values({
       nomenclatureId: created.id,
       delta: quantity,
@@ -136,7 +133,6 @@ async function applyFull(userId: string, record: Record<string, string>) {
     .update(nomenclature)
     .set({
       ...values,
-      ...(registered === null ? {} : { registered }),
       ...(onOrder === null ? {} : { onOrder }),
     })
     .where(eq(nomenclature.id, existing.id));
@@ -166,8 +162,9 @@ export async function saveNomenclatureItem(
     description: string;
     priceKopeks: number;
     compareAtKopeks: number | null;
+    logisticsKopeks?: number | null;
+    leadTime?: string;
     quantityOnHand: number;
-    registered: boolean;
     onOrder: boolean;
     publish: boolean;
     attributes: { attributeDefId: number; valueNumber: number | null; valueText?: string | null }[];
@@ -176,6 +173,7 @@ export async function saveNomenclatureItem(
   const sku = input.sku.trim().toUpperCase();
   if (!sku) throw new DomainError("Укажите артикул");
   if (input.title.trim().length < 3) throw new DomainError("Укажите название");
+  if (input.model.length > textInputLimit) throw new DomainError(`Модель — не больше ${textInputLimit} символов`);
   const description = readListingDescription(input.description);
   if (input.quantityOnHand < 0) throw new DomainError("Остаток не может быть отрицательным");
 
@@ -196,9 +194,10 @@ export async function saveNomenclatureItem(
         description,
         priceKopeks: input.priceKopeks,
         compareAtKopeks: input.compareAtKopeks,
+        logisticsKopeks: input.logisticsKopeks ?? null,
+        leadTime: input.leadTime ?? "",
         quantityOnHand: input.quantityOnHand,
         city: "",
-        registered: input.registered,
         onOrder: input.onOrder,
         isPublished: input.publish,
       })
@@ -234,9 +233,10 @@ export async function saveNomenclatureItem(
       description,
       priceKopeks: input.priceKopeks,
       compareAtKopeks: input.compareAtKopeks,
+      logisticsKopeks: input.logisticsKopeks ?? null,
+      leadTime: input.leadTime ?? "",
       quantityOnHand: input.quantityOnHand,
       city: "",
-      registered: input.registered,
       onOrder: input.onOrder,
       isPublished: input.publish,
       updatedAt: new Date(),
