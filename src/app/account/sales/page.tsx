@@ -15,7 +15,7 @@ export default async function SalesPage() {
   if (user.staffRole !== "manager") {
     return (
       <main>
-        <h1 className="text-3xl">Продажи</h1>
+        <h1 className="font-display text-xl font-extrabold tracking-tight text-deep md:text-2xl">Продажи</h1>
         <p className="mt-3 text-muted">По частным объявлениям заказ не оформляется. Покупатель звонит по телефону в объявлении.</p>
       </main>
     );
@@ -29,7 +29,7 @@ export default async function SalesPage() {
   const seen = new Set<string>();
   return (
     <main>
-      <h1 className="text-3xl">Продажи</h1>
+      <h1 className="font-display text-xl font-extrabold tracking-tight text-deep md:text-2xl">Продажи</h1>
       <ul className="mt-4 space-y-3">
         {rows.map((row) => {
           if (!row.order || seen.has(row.order.id)) return null;
@@ -38,7 +38,7 @@ export default async function SalesPage() {
           return (
             <li key={row.order.id}>
               <Link href={`/account/orders/${row.order.id}`} className="block rounded-3xl border border-line bg-card p-4">
-                <span className="font-display">{orderCode(row.order.orderNo)}</span>
+                <span className="font-display font-semibold text-deep">{orderCode(row.order.orderNo)}</span>
                 <ul className="mt-2 text-sm text-muted">
                   {mine.map((item) => (
                     <li key={item.id}>

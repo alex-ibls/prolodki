@@ -1,26 +1,28 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { listings } from "@/db/schema";
-import { buttonClass } from "@/components/styles";
+import { actionClass } from "@/components/styles";
 import { listingStats } from "@/lib/activity";
 import { formatRub } from "@/lib/format";
 import { listingStatusLabel } from "@/lib/labels";
-import { ensureIndividualSeller } from "@/lib/seller";
+import { buyerListingsEnabled, ensureIndividualSeller } from "@/lib/seller";
 import { getCurrentUser } from "@/lib/session";
 
 export const metadata = { title: "Объявления" };
 
 export default async function ListingsPage() {
+  if (!buyerListingsEnabled) redirect("/account");
   const current = await getCurrentUser();
   if (!current) return null;
   const user = await ensureIndividualSeller(current);
   if (!user.emailVerifiedAt || !user.sellerProfile) {
     return (
       <main>
-        <h1 className="text-3xl">Объявления</h1>
+        <h1 className="font-display text-xl font-extrabold tracking-tight text-deep md:text-2xl">Объявления</h1>
         <p className="mt-3 text-muted">Чтобы разместить объявление, подтвердите email в профиле.</p>
-        <Link href="/account" className={`${buttonClass} mt-4`}>
+        <Link href="/account" className={`${actionClass} mt-4`}>
           К профилю
         </Link>
       </main>
@@ -34,8 +36,8 @@ export default async function ListingsPage() {
   return (
     <main>
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-3xl">Объявления</h1>
-        <Link href="/account/listings/new" className={buttonClass}>
+        <h1 className="font-display text-xl font-extrabold tracking-tight text-deep md:text-2xl">Объявления</h1>
+        <Link href="/account/listings/new" className={actionClass}>
           Новое
         </Link>
       </div>
@@ -43,7 +45,7 @@ export default async function ListingsPage() {
         {rows.map((row) => (
           <li key={row.id}>
             <Link href={`/account/listings/${row.id}`} className="block rounded-3xl border border-line bg-card p-4">
-              <span className="font-display">{row.title}</span>
+              <span className="font-display font-semibold text-deep">{row.title}</span>
               <span className="ml-3 text-sm text-muted">
                 {listingStatusLabel[row.status]} · {formatRub(row.priceKopeks)}
               </span>

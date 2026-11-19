@@ -30,7 +30,7 @@ export function CatalogSections({
   return (
     <>
       {mobile.items.length > 0 ? (
-        <nav className="mb-3 lg:hidden" aria-label="Подразделы">
+        <nav className="mb-3 md:hidden" aria-label="Подразделы">
           <div className={scroll}>
             {mobile.showUp ? (
               <Link href={sectionHref(search, mobile.up, paths)} className="tag shrink-0 whitespace-nowrap border border-line bg-white px-3 py-1.5 text-sm text-ink">
@@ -53,10 +53,10 @@ export function CatalogSections({
           </div>
         </nav>
       ) : null}
-      <div className="lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start lg:gap-8">
-        <aside className="mb-4 grid min-w-0 gap-4 lg:sticky lg:top-32 lg:mb-0 lg:max-h-[calc(100vh-9rem)] lg:overflow-x-hidden lg:overflow-y-auto">
+      <div className="md:grid md:grid-cols-[17rem_minmax(0,1fr)] md:items-start md:gap-6">
+        <aside className="mb-4 grid min-w-0 gap-4 md:sticky md:top-32 md:mb-0 md:flex md:max-h-[calc(100vh-9rem)] md:flex-col md:overflow-hidden">
           {branch.length > 0 ? (
-            <nav className="hidden bg-white p-4 lg:block" aria-label="Подразделы">
+            <nav className="hidden shrink-0 bg-white p-4 md:block" aria-label="Подразделы">
               <ul>
                 {branch.map((item) => (
                   <SectionBranch key={item.id} categories={categories} node={item} depth={0} activeSlug={activeSlug} chainIds={chainIds} search={search} paths={paths} />

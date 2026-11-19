@@ -150,7 +150,7 @@ export function ProductGallery({
           ))}
         </div>
         {images.length > 1 ? (
-          <p className="pointer-events-none absolute bottom-3 right-3 rounded-md bg-navy/80 px-2.5 py-1 text-xs font-semibold text-white">
+          <p className="pointer-events-none absolute bottom-3 right-3 rounded-md bg-moss px-2.5 py-1 text-xs font-semibold text-white">
             {index + 1} / {images.length}
           </p>
         ) : null}
@@ -249,7 +249,7 @@ export function ProductGallery({
 }
 
 function viewerModeClass(active: boolean) {
-  return `btn flex h-10 w-10 items-center justify-center ${active ? "bg-navy text-white" : "border border-line bg-white text-deep"}`;
+  return `flex h-10 w-10 items-center justify-center ${active ? "text-deep" : "text-deep/45"}`;
 }
 
 function Zone({

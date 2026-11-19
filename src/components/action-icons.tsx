@@ -12,6 +12,17 @@ export function HeartIcon({ filled = false }: { filled?: boolean }) {
   );
 }
 
+export function TrashIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden>
+      <path d="M4 7h16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M9 7V5.5h6V7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M7 7l1 13h8l1-13" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M10 11v6M14 11v6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function ShareIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden>
@@ -23,19 +34,3 @@ export function ShareIcon() {
   );
 }
 
-export function CartIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden>
-      <path
-        d="M6.2 6.5h14.2l-1.4 8.2H7.4L5.4 3.8H2.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="9" cy="19.4" r="1.35" fill="currentColor" />
-      <circle cx="17.2" cy="19.4" r="1.35" fill="currentColor" />
-    </svg>
-  );
-}

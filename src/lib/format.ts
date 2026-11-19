@@ -11,10 +11,8 @@ export function formatOffer(kopeks: number) {
   return formatRub(kopeks);
 }
 
-export function deliveryTerm(quantity: number, leadTime: string) {
-  if (quantity > 0) return "1 день";
-  const lead = leadTime.trim();
-  return lead || "по запросу";
+export function deliveryTerm(quantity: number) {
+  return quantity > 0 ? "1 день" : "1 месяц";
 }
 
 export function formatCardWhen(value: Date | string) {

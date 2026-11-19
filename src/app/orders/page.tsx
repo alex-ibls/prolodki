@@ -3,6 +3,7 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
+import { pageFrame } from "@/components/styles";
 import { formatDate, formatRub, orderCode } from "@/lib/format";
 import { readGuestToken } from "@/lib/guest";
 import { orderStatusLabel } from "@/lib/labels";
@@ -23,7 +24,7 @@ export default async function GuestOrdersPage() {
       })
     : [];
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
+    <main className={`${pageFrame} max-w-6xl`}>
       <h1 className="text-3xl">Заказы</h1>
       <p className="mt-2 text-sm text-muted">Заказы этого браузера.</p>
       {rows.length === 0 ? <p className="mt-6 text-muted">Заказов пока нет.</p> : null}

@@ -2,7 +2,7 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { kitItems, nomenclatureKitGroups, nomenclatureKitLinks } from "@/db/schema";
 import { DomainError } from "@/lib/errors";
-import { savePhoto } from "@/lib/uploads";
+import { deleteStored, savePhoto } from "@/lib/uploads";
 
 export type KitKind = "fit" | "extra";
 
@@ -83,6 +83,23 @@ export async function saveNomenclatureKit(nomenclatureId: string, formData: Form
       if (item.id) {
         const found = byId.get(item.id);
         if (!found || found.kind !== kind) throw new DomainError("Элемент комплектации не найден");
+        const itemName = String(item.name || "").trim();
+        if (!itemName) throw new DomainError("Укажите название элемента");
+        if (itemName.length > 80) throw new DomainError("Название элемента — не больше 80 символов");
+        const priceKopeks = readKitPrice(String(item.priceRub || ""));
+        const fileKey = String(item.fileKey || "");
+        const file = fileKey ? formData.get(`kitFile:${fileKey}`) : null;
+        let imagePath = found.imagePath;
+        if (file instanceof File && file.size > 0) {
+          const stored = await savePhoto("kit", file);
+          if (stored) imagePath = stored;
+        }
+        if (found.name !== itemName || found.priceKopeks !== priceKopeks || found.imagePath !== imagePath) {
+          await db.update(kitItems).set({ name: itemName, priceKopeks, imagePath }).where(eq(kitItems.id, found.id));
+          if (imagePath !== found.imagePath && found.imagePath) await deleteStored(found.imagePath);
+          const next = { ...found, name: itemName, priceKopeks, imagePath };
+          byId.set(found.id, next);
+        }
         if (!itemIds.includes(found.id)) itemIds.push(found.id);
         continue;
       }

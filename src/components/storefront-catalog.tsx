@@ -3,6 +3,7 @@ import { CatalogSections } from "@/components/catalog-sections";
 import { listingCard } from "@/components/catalog-ui";
 import { InfiniteProducts } from "@/components/infinite-products";
 import { QuickFilters } from "@/components/quick-filters";
+import { pageFrame, pageTop } from "@/components/styles";
 import { catalogFacets } from "@/lib/catalog-facets";
 import { catalogQueryFromSearchParams, searchCatalog } from "@/lib/catalog";
 import { categoryPathMap } from "@/lib/sef";
@@ -20,7 +21,7 @@ export async function StorefrontCatalog({ params }: { params: URLSearchParams })
   const categories = categoryChoices(result.categories);
 
   return (
-    <main className="mx-auto max-w-6xl px-3 py-3 sm:px-4 lg:py-6">
+    <main className={`${pageFrame} max-w-6xl ${query.category ? "" : pageTop}`}>
       <CatalogSections
         categories={result.categories}
         activeSlug={query.category ?? ""}
@@ -39,7 +40,7 @@ export async function StorefrontCatalog({ params }: { params: URLSearchParams })
         }
       >
         {selected ? (
-          <h1 className="mb-3 font-display text-xl font-extrabold tracking-tight text-deep lg:text-2xl">{selected.name}</h1>
+          <h1 className="mb-3 font-display text-xl font-extrabold tracking-tight text-deep md:text-2xl">{selected.name}</h1>
         ) : null}
         <QuickFilters search={search} paths={paths} />
         <InfiniteProducts key={search} initialItems={result.rows.map((item) => listingCard(item, paths))} pages={result.pages} search={search} />

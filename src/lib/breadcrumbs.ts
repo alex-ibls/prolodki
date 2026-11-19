@@ -4,7 +4,6 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const labels: Record<string, string> = {
   catalog: "Каталог",
-  cart: "Корзина",
   checkout: "Оформление",
   favorites: "Избранное",
   history: "История",
@@ -39,7 +38,6 @@ export function crumbsForPath(pathname: string, names: Record<string, string> = 
   if (segments[0] === "checkout") {
     return [
       { href: "/", label: "Главная" },
-      { href: "/cart", label: "Корзина" },
       { href: "/checkout", label: "Оформление" },
     ];
   }

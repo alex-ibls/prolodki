@@ -3,6 +3,8 @@ import { db } from "@/db";
 import { sellerProfiles, users } from "@/db/schema";
 import type { CurrentUser } from "@/lib/session";
 
+export const buyerListingsEnabled = false;
+
 export async function grantIndividualSeller(userId: string) {
   await db
     .insert(sellerProfiles)

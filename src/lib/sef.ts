@@ -84,6 +84,11 @@ export function catalogParamsFromSegments(segments: string[]) {
     if (!key || !pairKeys.has(key)) return null;
     const value = body[index + 1];
     if (!value) return null;
+    if (key === "brand" && params.has("brand")) {
+      params.append(key, value);
+      index += 2;
+      continue;
+    }
     if (key === "price-from") params.set("price_min", value);
     else if (key === "price-to") params.set("price_max", value);
     else params.set(key, value);
@@ -152,7 +157,7 @@ function filterSegments(params: URLSearchParams) {
     if (!value) return;
     parts.push(key, encodePart(value));
   };
-  push("brand", params.get("brand"));
+  for (const value of [...new Set(params.getAll("brand").filter(Boolean))].sort()) push("brand", value);
   push("condition", allowed(params.get("condition"), ["new", "used"]));
   push("city", params.get("city"));
   push("availability", allowed(params.get("availability"), ["stock", "order"]));

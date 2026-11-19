@@ -65,7 +65,7 @@ export async function placeOrder(
 ) {
   if (!buyer && !guestToken) throw new DomainError("Сессия не найдена");
   const items = await db.select().from(cartItems).where(eq(cartItems.cartId, cartId));
-  if (items.length === 0) throw new DomainError("Корзина пуста");
+  if (items.length === 0) throw new DomainError("В заказе ничего нет");
 
   const orderId = await db.transaction(async (tx) => {
     const listingIds = items.map((item) => item.listingId);
@@ -87,7 +87,7 @@ export async function placeOrder(
         throw new DomainError("Одна из позиций больше не продаётся");
       }
       if (listing.source === "individual") {
-        throw new DomainError(`«${listing.title}» — объявление частного продавца. Уберите его из корзины и напишите продавцу.`);
+        throw new DomainError(`«${listing.title}» — объявление частного продавца. Напишите продавцу.`);
       }
       if (buyer && listing.sellerUserId && listing.sellerUserId === buyer.id) {
         throw new DomainError(`Нельзя купить своё объявление «${listing.title}»`);

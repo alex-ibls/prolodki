@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { resendConfirmEmailAction, updateProfileAction } from "@/actions/store";
 import { SavedNote } from "@/components/catalog-ui";
-import { buttonClass, inputClass, panelClass, secondaryClass } from "@/components/styles";
+import { actionClass, inputClass, panelClass, secondaryClass } from "@/components/styles";
 import { readQuery } from "@/lib/query";
-import { ensureIndividualSeller } from "@/lib/seller";
+import { buyerListingsEnabled, ensureIndividualSeller } from "@/lib/seller";
 import { getCurrentUser } from "@/lib/session";
 
 export const metadata = { title: "Кабинет" };
@@ -15,14 +15,14 @@ export default async function AccountPage({
 }) {
   const current = await getCurrentUser();
   if (!current) return null;
-  const user = await ensureIndividualSeller(current);
+  const user = buyerListingsEnabled ? await ensureIndividualSeller(current) : current;
   const { one } = await readQuery(searchParams);
   return (
     <main className="grid gap-4">
-      <h1 className="text-3xl">Профиль</h1>
+      <h1 className="font-display text-xl font-extrabold tracking-tight text-deep md:text-2xl">Профиль</h1>
       <SavedNote saved={one("saved")} />
-      {one("verified") ? <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-moss">Email подтверждён.</p> : null}
-      {one("sent") ? <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-moss">Письмо отправлено на {user.email}.</p> : null}
+      {one("verified") ? <p className="rounded-md bg-foam px-4 py-3 text-sm text-deep">Email подтверждён.</p> : null}
+      {one("sent") ? <p className="rounded-md bg-foam px-4 py-3 text-sm text-deep">Письмо отправлено на {user.email}.</p> : null}
       {one("error") ? <p className="text-sm text-red-700">{one("error")}</p> : null}
       <form action={updateProfileAction} className={`${panelClass} grid gap-3`}>
         <label className="text-sm">
@@ -38,16 +38,16 @@ export default async function AccountPage({
           <input name="city" defaultValue={user.city} className={inputClass} />
         </label>
         <p className="text-sm text-muted">{user.email}</p>
-        <button className={buttonClass}>Сохранить</button>
+        <button className={actionClass}>Сохранить</button>
       </form>
-      <section className={panelClass}>
-        <h2 className="text-lg">Объявления</h2>
+      {buyerListingsEnabled ? <section className={panelClass}>
+        <h2 className="text-lg text-deep">Объявления</h2>
         {user.emailVerifiedAt ? (
           <>
             <p className="mt-2 text-sm text-muted">
               Email подтверждён. Можно разместить объявление о БУ: покупатель напишет или позвонит.
             </p>
-            <Link href="/account/listings" className={`${buttonClass} mt-4`}>
+            <Link href="/account/listings" className={`${actionClass} mt-4`}>
               Мои объявления
             </Link>
           </>
@@ -61,7 +61,7 @@ export default async function AccountPage({
             </form>
           </>
         )}
-      </section>
+      </section> : null}
     </main>
   );
 }

@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { ErrorNote } from "@/components/catalog-ui";
+import { pageFrame } from "@/components/styles";
 import { OrderView } from "@/components/order-view";
 import { readGuestToken } from "@/lib/guest";
 import { getOrderBundle } from "@/lib/orders";
@@ -21,7 +22,7 @@ export default async function GuestOrderPage({
   const order = await getOrderBundle(id);
   if (!order || !token || order.buyerId || order.guestToken !== token) notFound();
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
+    <main className={`${pageFrame} max-w-6xl`}>
       <ErrorNote message={one("error")} />
       <OrderView order={order} user={null} isBuyer back={`/orders/${order.id}`} />
     </main>

@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { db } from "@/db";
 import { listings } from "@/db/schema";
 import { CrumbTitle } from "@/components/breadcrumbs";
@@ -7,7 +7,7 @@ import { SavedNote } from "@/components/catalog-ui";
 import { SellerForm } from "@/components/seller-form";
 import { listingStats } from "@/lib/activity";
 import { readQuery } from "@/lib/query";
-import { ensureIndividualSeller } from "@/lib/seller";
+import { buyerListingsEnabled, ensureIndividualSeller } from "@/lib/seller";
 import { getCurrentUser } from "@/lib/session";
 
 export default async function EditListingPage({
@@ -17,6 +17,7 @@ export default async function EditListingPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  if (!buyerListingsEnabled) redirect("/account");
   const { id } = await params;
   const { one } = await readQuery(searchParams);
   const current = await getCurrentUser();
@@ -31,7 +32,7 @@ export default async function EditListingPage({
   return (
     <main className="grid gap-3">
       <CrumbTitle label={listing.title} />
-      <h1 className="text-3xl">Объявление</h1>
+      <h1 className="font-display text-xl font-extrabold tracking-tight text-deep md:text-2xl">Объявление</h1>
       <SavedNote saved={one("saved")} />
       <p className="text-sm text-muted">
         Просмотры {stat?.view ?? 0} · в избранном {stat?.favorite ?? 0} · телефон {stat?.phone_reveal ?? 0}

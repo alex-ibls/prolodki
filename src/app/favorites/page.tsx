@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { toggleFavoriteAction } from "@/actions/activity";
-import { secondaryClass } from "@/components/styles";
+import { pageFrame, secondaryClass } from "@/components/styles";
 import { favoriteListings } from "@/lib/activity";
 import { formatOffer } from "@/lib/format";
 import { getCurrentUser } from "@/lib/session";
@@ -11,8 +11,8 @@ export default async function FavoritesPage() {
   const user = await getCurrentUser();
   const items = await favoriteListings();
   return (
-    <main className="mx-auto max-w-3xl px-3 py-4 sm:px-4 sm:py-8">
-      <h1 className="text-2xl sm:text-3xl">Избранное</h1>
+    <main className={`${pageFrame} max-w-6xl`}>
+      <h1 className="font-display text-xl font-extrabold tracking-tight text-deep md:text-2xl">Избранное</h1>
       {user ? <p className="mt-2 text-sm text-muted">Список хранится в аккаунте.</p> : null}
       {items.length === 0 ? <p className="mt-6 text-muted">Пока пусто.</p> : null}
       <ul className="mt-4 space-y-4">

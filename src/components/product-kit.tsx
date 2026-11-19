@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { addToCartAction } from "@/actions/store";
-import { CartIcon } from "@/components/action-icons";
+import { TrashIcon } from "@/components/action-icons";
 import { FavoriteButton, ShareButton } from "@/components/product-actions";
-import { actionClass } from "@/components/styles";
+import { actionClass, mobileDockClass } from "@/components/styles";
 import { formatRub } from "@/lib/format";
 import type { KitGroup } from "@/lib/kit";
 
@@ -57,7 +57,7 @@ export function ProductKit({
 
   return (
     <section className="grid items-start gap-6 md:grid-cols-[minmax(0,1fr)_18rem]">
-      <div className="grid gap-5">
+      <div className="grid gap-6">
       {groups.map((group) => (
         <div key={group.id}>
           <h3 className="text-base font-semibold text-deep">{group.name}</h3>
@@ -75,11 +75,11 @@ export function ProductKit({
                 >
                   {item.imagePath ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={`/media/${item.imagePath}`} alt="" className="aspect-[4/3] w-full object-cover" />
+                    <img src={`/media/${item.imagePath}`} alt="" className="block aspect-[4/3] w-full bg-foam object-contain" />
                   ) : (
                     <span className="flex aspect-[4/3] items-end bg-foam p-2 text-xs text-muted">{item.name}</span>
                   )}
-                  <span className="block px-2 py-2">
+                  <span className="block px-3 py-2">
                     <span className="block text-sm font-semibold leading-4 text-deep">{item.name}</span>
                     <span className="mt-1 block text-xs text-muted">
                       {item.priceKopeks > 0 ? `+ ${formatRub(item.priceKopeks)}` : "без доплаты"}
@@ -107,17 +107,20 @@ export function ProductKit({
               <p>
                 {item.name}: {item.priceKopeks > 0 ? `+ ${formatRub(item.priceKopeks)}` : "без доплаты"}
               </p>
-              {item.group.kind === "extra" ? (
-                <button type="button" onClick={() => toggle(item.group, item.id)} className="shrink-0 font-semibold text-navy" aria-label={`Убрать ${item.name}`}>
-                  Убрать
-                </button>
-              ) : null}
+              <button
+                type="button"
+                onClick={() => toggle(item.group, item.id)}
+                className="shrink-0 text-muted hover:text-deep"
+                aria-label={`Убрать ${item.name}`}
+              >
+                <TrashIcon />
+              </button>
             </div>
           ))}
           <p className="mt-3 text-2xl font-bold text-deep">{formatRub(total)}</p>
           <p className="mt-3 text-sm text-muted">Срок поставки (ориентировочно)</p>
           <p className="font-semibold text-deep">{leadTime}</p>
-          <div className="mt-4 flex items-end gap-2">
+          <div className={mobileDockClass}>
             <FavoriteButton listingId={listingId} slug={slug} saved={saved} back={`/product/${slug}/configurator`} />
             <ShareButton title={title} />
             {baseKopeks > 0 ? (
@@ -136,10 +139,7 @@ export function ProductKit({
                 ) : (
                   <input type="hidden" name="qty" value="1" />
                 )}
-                <button className={`${actionClass} w-full`}>
-                  <CartIcon />
-                  Заказать
-                </button>
+                <button className={`${actionClass} w-full`}>{maxQty > 0 ? "Купить" : "Заказать"}</button>
               </form>
             ) : (
               <p className="text-sm text-muted">Сейчас эту лодку нельзя заказать.</p>
@@ -147,6 +147,7 @@ export function ProductKit({
           </div>
         </div>
       </aside>
+      <div className="h-14 md:hidden" aria-hidden="true" />
     </section>
   );
 }

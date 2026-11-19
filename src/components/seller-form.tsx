@@ -5,7 +5,7 @@ import { CityPlaceField } from "@/components/city-place-field";
 import { LimitedText } from "@/components/limited-text";
 import { PhotoField } from "@/components/photo-field";
 import { RubleInput, TextInput, YearInput } from "@/components/validated-inputs";
-import { buttonClass, inputClass, secondaryClass } from "@/components/styles";
+import { actionClass, inputClass, secondaryClass } from "@/components/styles";
 import { allCategories } from "@/lib/catalog";
 import { effectiveCharacteristicsFor } from "@/lib/characteristics";
 import { brandModelChoices, categoryPath, isLeaf, withoutDemo } from "@/lib/taxonomy";
@@ -62,7 +62,7 @@ export async function SellerForm({
   }
   const locked = listing?.status === "reserved" || listing?.status === "archived";
   return (
-    <form action={saveListingAction} className="grid gap-3 rounded-3xl border border-line bg-card p-5">
+    <form action={saveListingAction} className="grid gap-3 rounded-3xl border border-line bg-card p-4">
       {listing ? <input type="hidden" name="listingId" value={listing.id} /> : null}
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
       <CategoryFields
@@ -133,7 +133,7 @@ export async function SellerForm({
           <button name="intent" value="draft" className={secondaryClass}>
             Черновик
           </button>
-          <button name="intent" value="submit" className={buttonClass}>
+          <button name="intent" value="submit" className={actionClass}>
             Отправить на модерацию
           </button>
         </div>

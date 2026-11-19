@@ -56,7 +56,7 @@ export async function NomenclatureForm({ item, error }: { item?: Item; error?: s
     else if (attr.valueNumber !== null) values[attr.definition.code] = String(attr.valueNumber);
   }
   return (
-    <form action={saveNomenclatureAction} className="grid gap-3 rounded-3xl border border-line bg-card p-5">
+    <form action={saveNomenclatureAction} className="grid gap-3 rounded-3xl border border-line bg-card p-4">
       {item ? <input type="hidden" name="id" value={item.id} /> : null}
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
       <div className="grid gap-3 md:grid-cols-2">

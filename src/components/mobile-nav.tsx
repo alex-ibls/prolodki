@@ -6,24 +6,17 @@ import { usePathname } from "next/navigation";
 const items = [
   { href: "/history", label: "История", icon: "clock" },
   { href: "/favorites", label: "Избранное", icon: "heart" },
-  { href: "/cart", label: "Корзина", icon: "bag" },
   { href: "/account", label: "Кабинет", icon: "user" },
 ] as const;
 
-export function MobileNav({
-  cartCount,
-  loggedIn,
-}: {
-  cartCount: number;
-  loggedIn: boolean;
-}) {
+export function MobileNav({ loggedIn }: { loggedIn: boolean }) {
   const pathname = usePathname();
   return (
     <nav
       aria-label="Разделы"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white pb-[env(safe-area-inset-bottom)] text-ink lg:hidden"
     >
-      <ul className="grid grid-cols-4">
+      <ul className="grid grid-cols-3">
         {items.map((item) => {
           const href = item.href === "/account" && !loggedIn ? "/login" : item.href;
           const active =
@@ -36,16 +29,9 @@ export function MobileNav({
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className={`flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 text-[10px] leading-none ${active ? "font-semibold text-navy" : "text-muted"}`}
+                className={`flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 text-[10px] leading-none ${active ? "font-semibold text-deep" : "text-muted"}`}
               >
-                <span className="relative">
-                  <NavIcon name={item.icon} />
-                  {item.href === "/cart" && cartCount > 0 ? (
-                    <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-moss px-1 text-[10px] font-semibold text-white">
-                      {cartCount}
-                    </span>
-                  ) : null}
-                </span>
+                <NavIcon name={item.icon} />
                 {label}
               </Link>
             </li>
@@ -79,14 +65,6 @@ function NavIcon({ name }: { name: (typeof items)[number]["icon"] }) {
     return (
       <svg {...common}>
         <path d="M12 19s-7-4.4-7-9a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 4.6-7 9-7 9z" />
-      </svg>
-    );
-  }
-  if (name === "bag") {
-    return (
-      <svg {...common}>
-        <path d="M6 8h12l-1 12H7L6 8z" />
-        <path d="M9 8V7a3 3 0 0 1 6 0v1" />
       </svg>
     );
   }

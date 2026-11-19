@@ -14,7 +14,7 @@ import { ancestorChainIds, withoutDemo } from "@/lib/taxonomy";
 export type CatalogQuery = {
   q?: string;
   category?: string;
-  brand?: string;
+  brands?: string[];
   condition?: string;
   source?: string;
   city?: string;
@@ -77,7 +77,7 @@ export function catalogQueryFromSearchParams(params: URLSearchParams): CatalogQu
   return {
     q: params.get("q") || undefined,
     category: params.get("category") || undefined,
-    brand: params.get("brand") || undefined,
+    brands: params.getAll("brand").map((value) => value.trim()).filter(Boolean),
     condition: params.get("condition") || undefined,
     source: params.get("source") || undefined,
     city: params.get("city") || undefined,
@@ -100,9 +100,9 @@ export async function searchCatalog(query: CatalogQuery, options?: { countOnly?:
     if (ids.length === 0) conditions.push(sql`false`);
     else conditions.push(inArray(listings.categoryId, ids));
   }
-  if (query.brand) {
-    const brand = await db.query.brands.findFirst({ where: eq(brands.slug, query.brand) });
-    conditions.push(brand ? eq(listings.brandId, brand.id) : sql`false`);
+  if (query.brands?.length) {
+    const picked = await db.select({ id: brands.id }).from(brands).where(inArray(brands.slug, query.brands));
+    conditions.push(picked.length ? inArray(listings.brandId, picked.map((item) => item.id)) : sql`false`);
   }
   if (query.condition === "new" || query.condition === "used") {
     conditions.push(eq(listings.condition, query.condition));
@@ -237,6 +237,7 @@ export async function searchCatalog(query: CatalogQuery, options?: { countOnly?:
       images: { orderBy: asc(listingImages.sort) },
       attributes: { with: { definition: true } },
       category: true,
+      brandRef: true,
     },
     orderBy: order,
     limit: pageSize,
@@ -283,6 +284,7 @@ export async function getPublishedListing(slug: string) {
       images: { orderBy: asc(listingImages.sort) },
       attributes: { with: { definition: true } },
       category: true,
+      brandRef: true,
       seller: true,
       organization: true,
     },

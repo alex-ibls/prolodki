@@ -100,7 +100,7 @@ export async function assertCartQty(listingId: string, qty: number) {
   if (listing.source === "individual") {
     throw new DomainError("Объявление частного продавца не оформляется заказом. Напишите продавцу.");
   }
-  if (listing.priceKopeks <= 0) throw new DomainError("Цена по запросу, в корзину не добавляется");
+  if (listing.priceKopeks <= 0) throw new DomainError("Цена по запросу, заказ не оформляется");
   return listing;
 }
 

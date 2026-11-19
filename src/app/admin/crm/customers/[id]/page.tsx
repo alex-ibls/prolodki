@@ -32,7 +32,7 @@ export default async function CustomerPage({
       <h1 className="text-3xl">{customer.name}</h1>
       {one("error") ? <p className="text-sm text-red-700">{one("error")}</p> : null}
       {one("saved") ? <p className="text-sm text-moss">Сохранено.</p> : null}
-      <form action={updateCustomerAction} className="grid gap-3 rounded-3xl border border-line bg-card p-5">
+      <form action={updateCustomerAction} className="grid gap-3 rounded-3xl border border-line bg-card p-4">
         <input type="hidden" name="id" value={customer.id} />
         <label className="text-sm">
           Имя

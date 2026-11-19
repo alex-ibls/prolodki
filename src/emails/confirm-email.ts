@@ -14,7 +14,7 @@ export function confirmEmailLetter(input: { name: string; confirmUrl: string }) 
   const text = [
     `${name}, здравствуйте!`,
     "",
-    `Чтобы размещать объявления на ${site.name}, подтвердите email. В кабинет можно входить и без этого.`,
+    `Подтвердите email на ${site.name}. В кабинет можно входить и без этого.`,
     "",
     input.confirmUrl,
     "",
@@ -41,7 +41,7 @@ export function confirmEmailLetter(input: { name: string; confirmUrl: string }) 
               <td style="padding:28px;">
                 <p style="margin:0 0 12px;font-size:18px;">${safeName}, здравствуйте!</p>
                 <p style="margin:0 0 20px;line-height:1.5;">
-                  Чтобы размещать объявления на ${escapeHtml(site.name)}, подтвердите email.
+                  Подтвердите email на ${escapeHtml(site.name)}.
                   В кабинет можно входить и без этого.
                 </p>
                 <a href="${safeUrl}" style="display:inline-block;background:#2a7ad4;color:#ffffff;text-decoration:none;border-radius:999px;padding:12px 20px;font-weight:700;">

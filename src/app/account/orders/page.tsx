@@ -19,7 +19,7 @@ export default async function BuyerOrdersPage() {
   });
   return (
     <main>
-      <h1 className="text-3xl">Мои заказы</h1>
+      <h1 className="font-display text-xl font-extrabold tracking-tight text-deep md:text-2xl">Мои заказы</h1>
       {rows.length === 0 ? <p className="mt-4 text-muted">Заказов пока нет.</p> : null}
       <ul className="mt-4 space-y-3">
         {rows.map((order) => {
@@ -27,7 +27,7 @@ export default async function BuyerOrdersPage() {
           return (
             <li key={order.id}>
               <Link href={`/account/orders/${order.id}`} className="block rounded-3xl border border-line bg-card p-4">
-                <span className="font-display">{orderCode(order.orderNo)}</span>
+                <span className="font-display font-semibold text-deep">{orderCode(order.orderNo)}</span>
                 <span className="ml-3 text-sm text-muted">
                   {orderStatusLabel[deriveOrderStatus(order.items)]} · {formatRub(sum)} · {formatDate(order.createdAt)}
                 </span>

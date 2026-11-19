@@ -1,8 +1,8 @@
-import Link from "next/link";
-import { catalogHref } from "@/lib/sef";
+"use client";
 
-const scroll =
-  "-mx-3 gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none] sm:-mx-4 sm:px-4 lg:mx-0 lg:px-0 [&::-webkit-scrollbar]:hidden";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { catalogHref } from "@/lib/sef";
 
 export function priceSortChoices(search: string, paths: Record<string, string>) {
   const params = new URLSearchParams(search);
@@ -13,35 +13,81 @@ export function priceSortChoices(search: string, paths: Record<string, string>) 
   ];
 }
 
-export function QuickFilters({ search, paths }: { search: string; paths: Record<string, string> }) {
-  const tags = priceSortChoices(search, paths);
+const iconButton = "btn inline-flex h-10 w-10 items-center justify-center border border-line bg-white text-ink hover:border-navy";
+
+export function SortMenu({
+  search,
+  paths,
+  align = "left",
+  suspended = false,
+}: {
+  search: string;
+  paths: Record<string, string>;
+  align?: "left" | "right";
+  suspended?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const sorts = priceSortChoices(search, paths);
+  const sortOn = sorts.some((item) => item.on);
+
+  useEffect(() => {
+    if (suspended) setOpen(false);
+  }, [suspended]);
 
   return (
-    <div className={`${scroll} mb-3 hidden lg:flex`} role="toolbar" aria-label="Сортировка">
-      {tags.map((tag) =>
-        tag.on ? (
-          <span
-            key={tag.id}
-            aria-pressed="true"
-            className="tag inline-flex shrink-0 items-center whitespace-nowrap border border-navy bg-navy text-sm font-semibold text-white"
+    <div className="relative">
+      <button
+        type="button"
+        className={`${iconButton} ${sortOn ? "border-navy text-navy" : ""}`}
+        aria-label="Сортировка"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        onClick={() => setOpen((value) => !value)}
+      >
+        <SortIcon />
+      </button>
+      {open ? (
+        <>
+          <button type="button" className="fixed inset-0 z-30" aria-label="Закрыть сортировку" onClick={() => setOpen(false)} />
+          <div
+            className={`absolute top-full z-40 mt-1 grid w-36 gap-1 overflow-hidden rounded border border-line bg-white p-1 ${align === "right" ? "right-0" : "left-0"}`}
+            role="menu"
           >
-            <span className="py-1.5 pl-3">{tag.label}</span>
-            <Link href={tag.href} aria-label={`Снять ${tag.label}`} className="px-2 py-1.5 text-base leading-none">
-              ×
-            </Link>
-          </span>
-        ) : (
-          <Link
-            key={tag.id}
-            href={tag.href}
-            aria-pressed="false"
-            className="tag shrink-0 whitespace-nowrap border border-line bg-white px-3 py-1.5 text-sm text-ink"
-          >
-            {tag.label}
-          </Link>
-        ),
-      )}
+            {sorts.map((item) => (
+              <Link
+                key={item.id}
+                href={item.href}
+                role="menuitem"
+                aria-current={item.on ? "true" : undefined}
+                className={`px-3 py-2 text-sm ${item.on ? "bg-navy font-semibold text-white" : "text-ink"}`}
+                onClick={() => setOpen(false)}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        </>
+      ) : null}
     </div>
+  );
+}
+
+export function QuickFilters({ search, paths }: { search: string; paths: Record<string, string> }) {
+  return (
+    <div className="mb-3 hidden md:flex">
+      <SortMenu search={search} paths={paths} />
+    </div>
+  );
+}
+
+function SortIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true">
+      <path d="M8 7v10" />
+      <path d="M5.5 9.5 8 7l2.5 2.5" />
+      <path d="M16 17V7" />
+      <path d="M13.5 14.5 16 17l2.5-2.5" />
+    </svg>
   );
 }
 

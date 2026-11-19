@@ -5,6 +5,7 @@ import { ProductKit } from "@/components/product-kit";
 import { isFavorite } from "@/lib/activity";
 import { getPublishedListing } from "@/lib/catalog";
 import { kitForNomenclature } from "@/lib/kit";
+import { pageFrame } from "@/components/styles";
 import { deliveryTerm } from "@/lib/format";
 import { readQuery } from "@/lib/query";
 
@@ -23,7 +24,7 @@ export default async function ConfiguratorPage({
   const saved = await isFavorite(item.id);
   if (kit.length === 0) notFound();
   return (
-    <main className="mx-auto max-w-6xl px-3 py-3 sm:px-4 sm:py-8">
+    <main className={`${pageFrame} max-w-6xl`}>
       <CrumbTitle label={item.title} href={`/product/${item.slug}`} />
       <h1 className="text-xl leading-6 sm:text-2xl">{item.title}</h1>
       <p className="mt-1 text-sm text-muted">Конфигуратор</p>
@@ -35,7 +36,7 @@ export default async function ConfiguratorPage({
           listingId={item.id}
           slug={item.slug}
           maxQty={item.quantity}
-          leadTime={deliveryTerm(item.quantity, item.leadTime)}
+          leadTime={deliveryTerm(item.quantity)}
           imagePath={item.images[0]?.path ?? ""}
           title={item.title}
           saved={saved}

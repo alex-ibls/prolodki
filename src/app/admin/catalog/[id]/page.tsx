@@ -35,7 +35,7 @@ export default async function CategoryDetailPage({
       <p className="text-sm text-muted">{categoryPath(categories, category.id)}</p>
       {one("error") ? <p className="text-sm text-red-700">{one("error")}</p> : null}
       {one("saved") ? <p className="text-sm text-moss">Сохранено.</p> : null}
-      <form action={saveCategoryAction} className="grid gap-3 rounded-3xl border border-line bg-card p-5">
+      <form action={saveCategoryAction} className="grid gap-3 rounded-3xl border border-line bg-card p-4">
         <input type="hidden" name="id" value={category.id} />
         <label className="text-sm">
           Название

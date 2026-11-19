@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { CartIcon } from "@/components/action-icons";
 import { actionClass } from "@/components/styles";
 import { formatOffer, formatPhone, formatRub } from "@/lib/format";
 import { catalogHref } from "@/lib/sef";
@@ -25,6 +24,7 @@ export type CardData = {
   attributes: SpecSource[];
   category?: { name: string; slug?: string; href?: string } | null;
   brand?: string;
+  brandHref?: string;
   createdAt?: Date | string | null;
   phone?: string | null;
   configurable?: boolean;
@@ -153,18 +153,24 @@ function SpecIcon({ code, className = "h-4 w-4" }: { code: string; className?: s
   );
 }
 
-export function SpecGrid({ items }: { items: { key: string; code: string; label: string; value: string }[] }) {
+export function SpecGrid({ items }: { items: { key: string; code: string; label: string; value: string; href?: string }[] }) {
   if (items.length === 0) return null;
   return (
     <ul className="grid grid-cols-2 gap-x-3 gap-y-3">
       {items.map((item) => (
         <li key={item.key} className="flex min-w-0 items-center gap-2">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-paper text-navy">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-paper text-deep">
             <SpecIcon code={item.code} />
           </span>
           <span className="min-w-0">
             <span className="block text-xs leading-4 text-muted">{item.label}</span>
-            <span className="block text-sm font-semibold text-ink">{item.value}</span>
+            {item.href ? (
+              <Link href={item.href} className="block truncate text-sm font-semibold text-deep hover:text-navy">
+                {item.value}
+              </Link>
+            ) : (
+              <span className="block text-sm font-semibold text-ink">{item.value}</span>
+            )}
           </span>
         </li>
       ))}
@@ -179,7 +185,7 @@ export function ProductCard({ item }: { item: CardData }) {
     .filter((value) => value !== "");
   return (
     <article className="flex h-full min-w-0 flex-col bg-white">
-      <Link href={`/product/${item.slug}`} className="flex flex-1 flex-col">
+      <Link href={`/product/${item.slug}`} className="block">
         <span className="relative block overflow-hidden bg-foam">
           {photo ? (
             // Local uploads are served by the app route and are not part of the image optimizer.
@@ -195,27 +201,36 @@ export function ProductCard({ item }: { item: CardData }) {
             <span className="absolute left-2 top-2 bg-black/70 px-1.5 py-0.5 text-[11px] font-medium text-white">БУ</span>
           ) : null}
         </span>
-        <span className="block flex-1 px-3 pt-3">
-          <span className="line-clamp-2 text-base font-semibold leading-5 text-deep">{item.title}</span>
-          {item.brand ? <span className="mt-1 block truncate text-sm text-muted">{item.brand}</span> : null}
-          {item.compareAtKopeks && item.compareAtKopeks > item.priceKopeks ? (
-            <span className="mt-1 block text-xs text-muted line-through">{formatRub(item.compareAtKopeks)}</span>
-          ) : null}
-        </span>
-        {specs.length ? (
-          <span className="flex items-center gap-3 border-t border-line px-3 py-2 text-xs text-muted">
-            {specs.map((value) => (
-              <span key={value}>{value}</span>
-            ))}
-          </span>
-        ) : (
-          <span className="block border-t border-line" />
-        )}
       </Link>
+      <span className="block flex-1 px-3 pt-3">
+        <Link href={`/product/${item.slug}`} className="line-clamp-2 text-base font-semibold leading-5 text-deep">
+          {item.title}
+        </Link>
+        {item.brand ? (
+          item.brandHref ? (
+            <Link href={item.brandHref} className="mt-1 block truncate text-sm text-muted hover:text-navy">
+              {item.brand}
+            </Link>
+          ) : (
+            <span className="mt-1 block truncate text-sm text-muted">{item.brand}</span>
+          )
+        ) : null}
+        {item.compareAtKopeks && item.compareAtKopeks > item.priceKopeks ? (
+          <span className="mt-1 block text-xs text-muted line-through">{formatRub(item.compareAtKopeks)}</span>
+        ) : null}
+      </span>
+      {specs.length ? (
+        <span className="flex items-center gap-3 border-t border-line px-3 py-2 text-xs text-muted">
+          {specs.map((value) => (
+            <span key={value}>{value}</span>
+          ))}
+        </span>
+      ) : (
+        <span className="block border-t border-line" />
+      )}
       {item.configurable ? (
         <Link href={`/product/${item.slug}/configurator`} className={`${actionClass} w-full`} style={{ borderRadius: 0 }}>
-          <CartIcon />
-          Купить
+          {item.quantity > 0 ? "Купить" : "Заказать"}
         </Link>
       ) : null}
       {item.category?.name && item.category.href ? (
@@ -241,7 +256,10 @@ function cardSpec(item: CardData, code: string) {
   return `${spec.valueNumber}${unit}`;
 }
 
-export function listingCard(item: CardData, paths: Record<string, string> = {}): CardData {
+export function listingCard(
+  item: CardData & { brandRef?: { slug: string } | null },
+  paths: Record<string, string> = {},
+): CardData {
   return {
     slug: item.slug,
     title: item.title,
@@ -265,6 +283,7 @@ export function listingCard(item: CardData, paths: Record<string, string> = {}):
     })),
     category: categoryLink(item.category, paths),
     brand: item.brand,
+    brandHref: item.brandHref || (item.brandRef?.slug ? catalogHref(new URLSearchParams([["brand", item.brandRef.slug]]), paths) : ""),
     createdAt: item.createdAt,
     configurable: item.configurable === true,
   };
@@ -287,7 +306,7 @@ export function ProductGrid({ items }: { items: CardData[] }) {
     return <p className="text-muted">В этой подборке пока нет объявлений.</p>;
   }
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
       {items.map((item) => (
         <ProductCard key={item.slug} item={item} />
       ))}
@@ -302,5 +321,5 @@ export function ErrorNote({ message }: { message?: string }) {
 
 export function SavedNote({ saved }: { saved?: string }) {
   if (!saved) return null;
-  return <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-moss">Сохранено.</p>;
+  return <p className="rounded-md bg-foam px-4 py-3 text-sm text-deep">Сохранено.</p>;
 }

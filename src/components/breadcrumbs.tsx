@@ -37,7 +37,7 @@ export function BreadcrumbBar({ names = {} }: { names?: Record<string, string> }
     if (index >= 0) crumbs[index] = { ...crumbs[index], label: title.label };
   }
   return (
-    <nav aria-label="Хлебные крошки" className="mx-auto w-full max-w-6xl px-3 pt-2 text-xs sm:px-4 sm:pt-3 sm:text-sm">
+    <nav aria-label="Хлебные крошки" className="mx-auto w-full max-w-6xl px-3 pb-4 pt-4 text-xs sm:px-4 sm:pb-4 sm:pt-6 sm:text-sm">
       <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-muted">
         {crumbs.map((crumb, index) => {
           const current = index === crumbs.length - 1;

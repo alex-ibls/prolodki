@@ -156,19 +156,8 @@ export async function addToCartAction(formData: FormData) {
     const user = await getCurrentUser();
     if (user && listing.sellerUserId === user.id) throw new DomainError("Нельзя купить своё объявление");
     const cart = await getOrCreateCart();
-    const [existing] = await db
-      .select()
-      .from(cartItems)
-      .where(and(eq(cartItems.cartId, cart.id), eq(cartItems.listingId, listingId)));
-    const nextQty = (existing?.qty ?? 0) + qty;
-    if (existing) {
-      await db
-        .update(cartItems)
-        .set({ qty: nextQty, options })
-        .where(and(eq(cartItems.cartId, cart.id), eq(cartItems.listingId, listingId)));
-    } else {
-      await db.insert(cartItems).values({ cartId: cart.id, listingId, qty, options });
-    }
+    await db.delete(cartItems).where(eq(cartItems.cartId, cart.id));
+    await db.insert(cartItems).values({ cartId: cart.id, listingId, qty, options });
     await recordListingEvent({
       listingId,
       kind: "cart_add",
@@ -177,12 +166,12 @@ export async function addToCartAction(formData: FormData) {
     });
   } catch (error) {
     if (isNextNavigation(error)) throw error;
-    const message = error instanceof DomainError ? error.message : "Не удалось добавить в корзину";
+    const message = error instanceof DomainError ? error.message : "Не удалось оформить заказ";
     const configurator = `/product/${slug}/configurator`;
     const back = formData.get("next") === configurator ? configurator : `/product/${slug}`;
     redirect(`${back}?error=${encodeURIComponent(message)}`);
   }
-  redirect("/cart");
+  redirect("/checkout");
 }
 
 export async function updateCartAction(formData: FormData) {
@@ -205,9 +194,9 @@ export async function updateCartAction(formData: FormData) {
   } catch (error) {
     if (isNextNavigation(error)) throw error;
     const message = error instanceof DomainError ? error.message : "Не получилось выполнить действие";
-    redirect(`/cart?error=${encodeURIComponent(message)}`);
+    redirect(`/checkout?error=${encodeURIComponent(message)}`);
   }
-  redirect("/cart");
+  redirect("/checkout");
 }
 
 export async function checkoutAction(formData: FormData) {

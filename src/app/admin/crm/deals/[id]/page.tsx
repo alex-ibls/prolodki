@@ -36,7 +36,7 @@ export default async function DealPage({
         {deal.order ? ` · заказ ${orderCode(deal.order.orderNo)}` : ""}
       </p>
       {one("error") ? <p className="text-sm text-red-700">{one("error")}</p> : null}
-      <form action={updateDealAction} className="grid gap-3 rounded-3xl border border-line bg-card p-5">
+      <form action={updateDealAction} className="grid gap-3 rounded-3xl border border-line bg-card p-4">
         <input type="hidden" name="id" value={deal.id} />
         <label className="text-sm">
           Название

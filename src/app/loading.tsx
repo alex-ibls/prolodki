@@ -1,3 +1,5 @@
+import { pageFrame } from "@/components/styles";
+
 export default function Loading() {
-  return <main className="mx-auto max-w-6xl px-4 py-10 text-muted">Загрузка…</main>;
+  return <main className={`${pageFrame} max-w-6xl text-muted`}>Загрузка…</main>;
 }

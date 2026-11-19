@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { priceSortChoices } from "@/components/quick-filters";
-import { buttonClass, secondaryClass } from "@/components/styles";
+import { SortMenu } from "@/components/quick-filters";
+import { actionClass, secondaryClass } from "@/components/styles";
 import type { CatalogChoice, CatalogFacets, NumberFacet } from "@/lib/catalog-facets";
 import { catalogHref } from "@/lib/sef";
 
@@ -26,7 +26,6 @@ export function CatalogFilters({
   const router = useRouter();
   const closeRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
-  const [sortOpen, setSortOpen] = useState(false);
   const params = new URLSearchParams(search);
   const urlCategory = params.get("category") || "";
   const selected = [...params.keys()].filter((key) => key !== "q" && key !== "price" && key !== "page").length;
@@ -44,7 +43,7 @@ export function CatalogFilters({
   useEffect(() => {
     if (!open) return;
     closeRef.current?.focus();
-    const media = window.matchMedia("(min-width: 1024px)");
+    const media = window.matchMedia("(min-width: 768px)");
     const lock = () => {
       document.body.style.overflow = media.matches ? "" : "hidden";
     };
@@ -97,11 +96,13 @@ export function CatalogFilters({
     next.delete("registered");
     next.delete("source");
     for (const key of [...next.keys()]) {
-      if (key.startsWith("attr_") || key === "price_min" || key === "price_max") next.delete(key);
+      if (key.startsWith("attr_") || key === "price_min" || key === "price_max" || key === "brand") next.delete(key);
     }
     const picked = String(formData.get("category") || "");
     put(next, "category", !typeTouched.current && picked === typeSlug ? urlCategory : picked);
-    put(next, "brand", String(formData.get("brand") || ""));
+    for (const value of formData.getAll("brand")) {
+      if (value) next.append("brand", String(value));
+    }
     put(next, "condition", String(formData.get("condition") || ""));
     if (active.price && price) writeRange(next, "price_min", "price_max", price, active.price);
     for (const item of active.attributes) {
@@ -136,9 +137,6 @@ export function CatalogFilters({
     router.push(catalogHref(draftParams(new FormData(event.currentTarget)), paths));
   }
 
-  const sorts = priceSortChoices(search, paths);
-  const sortOn = sorts.some((item) => item.on);
-
   const reset = new URLSearchParams(search);
   reset.delete("page");
   for (const key of [...reset.keys()]) {
@@ -147,48 +145,15 @@ export function CatalogFilters({
 
   return (
     <>
-    <div className="flex justify-end gap-2 lg:hidden">
-      <div className="relative">
-        <button
-          type="button"
-          className={`${iconButton} ${sortOn ? "border-navy text-navy" : ""}`}
-          aria-label="Сортировка"
-          aria-expanded={sortOpen}
-          aria-haspopup="menu"
-          onClick={() => setSortOpen((value) => !value)}
-        >
-          <SortIcon />
-        </button>
-        {sortOpen ? (
-          <>
-            <button type="button" className="fixed inset-0 z-30" aria-label="Закрыть сортировку" onClick={() => setSortOpen(false)} />
-            <div className="absolute top-full left-0 z-40 mt-1 grid w-36 gap-1 overflow-hidden rounded border border-line bg-white p-1" role="menu">
-              {sorts.map((item) => (
-                <Link
-                  key={item.id}
-                  href={item.href}
-                  role="menuitem"
-                  aria-current={item.on ? "true" : undefined}
-                  className={`px-3 py-2 text-sm ${item.on ? "bg-navy font-semibold text-white" : "text-ink"}`}
-                  onClick={() => setSortOpen(false)}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-          </>
-        ) : null}
-      </div>
+    <div className="flex justify-end gap-2 md:hidden">
+      <SortMenu search={search} paths={paths} suspended={open} />
       <button
         type="button"
         className={`${iconButton} relative`}
         aria-label="Фильтры"
         aria-expanded={open}
         aria-controls="catalog-filters"
-        onClick={() => {
-          setSortOpen(false);
-          setOpen(true);
-        }}
+        onClick={() => setOpen(true)}
       >
         <SettingsIcon />
         {selected > 0 ? (
@@ -199,7 +164,7 @@ export function CatalogFilters({
       </button>
     </div>
     {open ? (
-      <button type="button" className="fixed inset-0 z-50 bg-deep/40 lg:hidden" aria-label="Закрыть фильтры" onClick={() => setOpen(false)} />
+      <button type="button" className="fixed inset-0 z-50 bg-deep/40 md:hidden" aria-label="Закрыть фильтры" onClick={() => setOpen(false)} />
     ) : null}
     <form
       id="catalog-filters"
@@ -210,11 +175,11 @@ export function CatalogFilters({
       aria-labelledby={open ? "catalog-filters-title" : undefined}
       className={
         open
-          ? "fixed inset-x-0 bottom-0 z-50 flex max-h-[min(85dvh,100%)] min-w-0 flex-col rounded-t bg-white pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(50,55,70,0.12)] motion-safe:animate-[sheet-up_200ms_ease-out] lg:static lg:z-auto lg:grid lg:w-full lg:max-h-none lg:animate-none lg:gap-4 lg:rounded-none lg:p-4 lg:pb-4 lg:shadow-none"
-          : "hidden min-w-0 gap-4 bg-white p-4 lg:grid lg:w-full"
+          ? "fixed inset-x-0 bottom-0 z-50 flex max-h-[min(85dvh,100%)] min-w-0 flex-col rounded-t bg-white pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(50,55,70,0.12)] motion-safe:animate-[sheet-up_200ms_ease-out] md:static md:z-auto md:min-h-0 md:w-full md:max-h-none md:flex-1 md:animate-none md:gap-0 md:overflow-hidden md:rounded-none md:pb-0 md:shadow-none"
+          : "hidden min-w-0 bg-white md:flex md:min-h-0 md:w-full md:flex-1 md:flex-col md:overflow-hidden"
       }
     >
-      <div className="lg:hidden">
+      <div className="md:hidden">
         <div className="mx-auto mt-2 h-1 w-10 bg-line" aria-hidden="true" />
         <div className="flex items-center justify-between px-4 py-3">
           <h2 id="catalog-filters-title" className="text-base font-semibold text-deep">
@@ -225,8 +190,8 @@ export function CatalogFilters({
           </button>
         </div>
       </div>
-      <h2 className="hidden text-base font-semibold text-deep lg:block">Фильтры</h2>
-      <div className="grid min-h-0 min-w-0 flex-1 gap-4 overflow-y-auto px-4 pb-4 lg:contents lg:overflow-visible lg:px-0 lg:pb-0">
+      <h2 className="hidden px-4 pt-4 text-base font-semibold text-deep md:block">Фильтры</h2>
+      <div className="grid min-h-0 min-w-0 flex-1 gap-4 overflow-y-auto px-4 pb-4 md:px-4">
       <SelectField
         label="Раздел"
         name="category"
@@ -236,8 +201,8 @@ export function CatalogFilters({
         onChange={(value) => void chooseCategory(value)}
       />
       <div key={category || "all"} className="contents">
-      {active.brands.length > 1 ? (
-        <SelectField label="Бренд" name="brand" value={category === urlCategory ? params.get("brand") || "" : ""} options={active.brands} empty="Любой" />
+      {active.brands.length > 0 ? (
+        <BrandField options={active.brands} selected={category === urlCategory ? params.getAll("brand") : []} />
       ) : null}
       {active.conditions.length > 1 ? (
         <SelectField label="Состояние" name="condition" value={category === urlCategory ? params.get("condition") || "" : ""} options={active.conditions} empty="Любое" />
@@ -286,14 +251,41 @@ export function CatalogFilters({
       )}
       </div>
       </div>
-      <div className="grid grid-cols-2 gap-2 border-t border-line p-4 lg:contents lg:border-0 lg:p-0">
-      <button className={`${buttonClass} w-full whitespace-nowrap`}>Показать {formatMoney(total)}</button>
+      <div className="grid grid-cols-2 gap-2 border-t border-line p-4 md:hidden">
+      <button className={`${actionClass} w-full whitespace-nowrap`}>Показать {formatMoney(total)}</button>
       <Link href={catalogHref(reset, paths)} className={`${secondaryClass} w-full`}>
         Сбросить
       </Link>
       </div>
+      <div className="hidden px-4 pb-4 md:block">
+        <Link href={catalogHref(reset, paths)} className={`${secondaryClass} w-full`}>
+          Сбросить
+        </Link>
+      </div>
+      {selects > 0 ? (
+        <div className="hidden shrink-0 border-t border-line bg-white px-4 py-3 shadow-[0_-8px_24px_rgba(50,55,70,0.12)] motion-safe:animate-[sheet-up_200ms_ease-out] md:block">
+          <button className={`${actionClass} w-full whitespace-nowrap`}>Показать {formatMoney(total)}</button>
+        </div>
+      ) : null}
     </form>
     </>
+  );
+}
+
+function BrandField({ options, selected }: { options: CatalogChoice[]; selected: string[] }) {
+  const picked = new Set(selected);
+  return (
+    <fieldset className="grid min-w-0 gap-2">
+      <legend className="text-sm text-ink">Бренд</legend>
+      <div className="grid max-h-44 gap-1.5 overflow-y-auto pr-1">
+        {options.map((option) => (
+          <label key={option.value} className="flex min-w-0 items-center gap-2 text-sm text-ink">
+            <input type="checkbox" name="brand" value={option.value} defaultChecked={picked.has(option.value)} className="accent-moss" />
+            <span className="min-w-0 truncate">{option.label}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 
@@ -319,7 +311,7 @@ function SelectField({
         name={name}
         defaultValue={value}
         onChange={onChange ? (event) => onChange(event.target.value) : undefined}
-        className="field w-full min-w-0 max-w-full border border-line bg-white px-3 py-2"
+        className="field w-full min-w-0 max-w-full border border-line bg-white px-3 py-2 accent-moss focus:border-moss"
       >
         <option value="">{empty}</option>
         {options.map((option) => (
@@ -361,7 +353,7 @@ function RangeField({
       <p className="text-xs text-muted">{caption}</p>
       <div className="relative mx-2 h-6 min-w-0">
         <div className="absolute top-1/2 right-0 left-0 h-1 -translate-y-1/2 bg-line" />
-        <div className="absolute top-1/2 h-1 -translate-y-1/2 bg-navy" style={{ left: `${left}%`, width: `${Math.max(right - left, 0)}%` }} />
+        <div className="absolute top-1/2 h-1 -translate-y-1/2 bg-moss" style={{ left: `${left}%`, width: `${Math.max(right - left, 0)}%` }} />
         <RangeInput
           label={`${label}, от`}
           min={min}
@@ -407,7 +399,7 @@ function RangeInput({
       step={step}
       value={value}
       onChange={(event) => onChange(snap(Number(event.target.value), min, step))}
-      className="pointer-events-none absolute inset-0 m-0 w-full min-w-0 max-w-full appearance-none bg-transparent [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-navy [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-navy"
+      className="pointer-events-none absolute inset-0 m-0 w-full min-w-0 max-w-full appearance-none bg-transparent [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-moss [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-moss"
     />
   );
 }
@@ -470,17 +462,6 @@ function formatMoney(value: number) {
 }
 
 const iconButton = "btn inline-flex h-10 w-10 items-center justify-center border border-line bg-white text-ink hover:border-navy";
-
-function SortIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true">
-      <path d="M8 7v10" />
-      <path d="M5.5 9.5 8 7l2.5 2.5" />
-      <path d="M16 17V7" />
-      <path d="M13.5 14.5 16 17l2.5-2.5" />
-    </svg>
-  );
-}
 
 function SettingsIcon() {
   return (

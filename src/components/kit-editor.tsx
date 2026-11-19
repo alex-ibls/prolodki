@@ -21,6 +21,7 @@ type DraftItem = {
   priceRub: string;
   imagePath: string;
   fileKey: string;
+  preview: string;
 };
 
 type DraftGroup = {
@@ -52,7 +53,8 @@ export function KitEditor({
         name: item.name,
         priceRub: String(item.priceKopeks / 100),
         imagePath: item.imagePath,
-        fileKey: "",
+        fileKey: item.id,
+        preview: "",
       })),
     })),
   );
@@ -63,9 +65,12 @@ export function KitEditor({
         groups.map((group) => ({
           name: group.name,
           kind: group.kind,
-          items: group.items.map((item) =>
-            item.id ? { id: item.id } : { name: item.name, priceRub: item.priceRub, fileKey: item.fileKey },
-          ),
+          items: group.items.map((item) => ({
+            id: item.id,
+            name: item.name,
+            priceRub: item.priceRub,
+            fileKey: item.fileKey,
+          })),
         })),
       ),
     [groups],
@@ -87,7 +92,8 @@ export function KitEditor({
           name: item.name,
           priceRub: String(item.priceKopeks / 100),
           imagePath: item.imagePath,
-          fileKey: "",
+          fileKey: item.id,
+          preview: "",
         },
       ],
     });
@@ -101,12 +107,22 @@ export function KitEditor({
     });
   }
 
+  function updateItem(group: DraftGroup, key: string, next: Partial<DraftItem>) {
+    patch(group.key, {
+      items: group.items.map((row) => {
+        if (row.key !== key) return row;
+        if (next.preview !== undefined && row.preview) URL.revokeObjectURL(row.preview);
+        return { ...row, ...next };
+      }),
+    });
+  }
+
   function addNewItem(group: DraftGroup) {
     const fileKey = crypto.randomUUID();
     patch(group.key, {
       items: [
         ...group.items,
-        { key: fileKey, id: null, name: "", priceRub: "", imagePath: "", fileKey },
+        { key: fileKey, id: null, name: "", priceRub: "", imagePath: "", fileKey, preview: "" },
       ],
     });
   }
@@ -120,7 +136,7 @@ export function KitEditor({
         </button>
       </div>
       <p className="text-sm text-muted">
-        Исполнение — один вариант в группе. Дополнительное оборудование можно выбрать несколько пунктов. Новый элемент попадает в общий список и доступен в других карточках.
+        Исполнение — один вариант в группе. Дополнительное оборудование можно выбрать несколько пунктов. Название, цена и иллюстрация общие: правка видна во всех карточках, где выбран этот элемент.
       </p>
       <input type="hidden" name="kitJson" value={payload} />
       {groups.map((group) => {
@@ -185,62 +201,59 @@ export function KitEditor({
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               {group.items.map((item) => (
-                <div key={item.key} className="grid gap-2 border border-line p-3">
-                  {item.imagePath ? (
+                <div key={item.key} className="grid border border-line">
+                  {item.preview || item.imagePath ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={`/media/${item.imagePath}`} alt="" className="h-24 w-full object-cover" />
+                    <img
+                      src={item.preview || `/media/${item.imagePath}`}
+                      alt=""
+                      className="block aspect-[4/3] w-full bg-foam object-contain"
+                    />
                   ) : null}
-                  {item.id ? (
-                    <p className="text-sm font-semibold">
-                      {item.name}
-                      <span className="mt-1 block font-normal text-muted">
-                        {Number(item.priceRub) > 0 ? `+ ${formatRub(Number(item.priceRub) * 100)}` : "без доплаты"}
-                      </span>
-                    </p>
-                  ) : (
-                    <>
-                      <label className="text-sm">
-                        Название
-                        <input
-                          value={item.name}
-                          maxLength={80}
-                          className={inputClass}
-                          onChange={(event) =>
-                            patch(group.key, {
-                              items: group.items.map((row) => (row.key === item.key ? { ...row, name: event.target.value } : row)),
-                            })
-                          }
-                        />
-                      </label>
-                      <label className="text-sm">
-                        Стоимость, ₽
-                        <input
-                          value={item.priceRub}
-                          inputMode="numeric"
-                          placeholder="0"
-                          className={inputClass}
-                          onChange={(event) =>
-                            patch(group.key, {
-                              items: group.items.map((row) =>
-                                row.key === item.key ? { ...row, priceRub: event.target.value.replace(/[^\d]/g, "") } : row,
-                              ),
-                            })
-                          }
-                        />
-                      </label>
-                      <label className="text-sm">
-                        Изображение
-                        <input type="file" name={`kitFile:${item.fileKey}`} accept="image/jpeg,image/png,image/webp" className={`${inputClass} py-1`} />
-                      </label>
-                    </>
-                  )}
+                  <div className="grid gap-2 p-3">
+                  <label className="text-sm">
+                    Название
+                    <input
+                      value={item.name}
+                      maxLength={80}
+                      className={inputClass}
+                      onChange={(event) => updateItem(group, item.key, { name: event.target.value })}
+                    />
+                  </label>
+                  <label className="text-sm">
+                    Стоимость, ₽
+                    <input
+                      value={item.priceRub}
+                      inputMode="numeric"
+                      placeholder="0"
+                      className={inputClass}
+                      onChange={(event) => updateItem(group, item.key, { priceRub: event.target.value.replace(/[^\d]/g, "") })}
+                    />
+                  </label>
+                  <label className="text-sm">
+                    {item.imagePath ? "Заменить изображение" : "Изображение"}
+                    <input
+                      type="file"
+                      name={`kitFile:${item.fileKey}`}
+                      accept="image/jpeg,image/png,image/webp"
+                      className={`${inputClass} py-1`}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        updateItem(group, item.key, { preview: file ? URL.createObjectURL(file) : "" });
+                      }}
+                    />
+                  </label>
                   <button
                     type="button"
                     className="text-left text-sm text-muted"
-                    onClick={() => patch(group.key, { items: group.items.filter((row) => row.key !== item.key) })}
+                    onClick={() => {
+                      if (item.preview) URL.revokeObjectURL(item.preview);
+                      patch(group.key, { items: group.items.filter((row) => row.key !== item.key) });
+                    }}
                   >
-                    Убрать
+                    Убрать из группы
                   </button>
+                  </div>
                 </div>
               ))}
             </div>

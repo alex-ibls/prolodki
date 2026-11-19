@@ -4,8 +4,6 @@ import { Logo } from "@/components/logo";
 import { MobileNav } from "@/components/mobile-nav";
 import { CatalogSearch } from "@/components/catalog-search";
 import { UserMenu } from "@/components/user-menu";
-import { cartLinkClass } from "@/components/styles";
-import { cartCount } from "@/lib/cart";
 import { allCategories } from "@/lib/catalog";
 import { categoryPathMap } from "@/lib/sef";
 import { withoutDemo } from "@/lib/taxonomy";
@@ -14,7 +12,6 @@ import { getCurrentUser } from "@/lib/session";
 
 export async function SiteHeader() {
   const user = await getCurrentUser();
-  const count = await cartCount();
   const paths = categoryPathMap(withoutDemo(await allCategories()));
   const bar = [
     { href: "/", label: "Главная" },
@@ -27,7 +24,7 @@ export async function SiteHeader() {
     <>
       <header className="sticky top-0 z-40">
         <div className="border-b border-line bg-white">
-          <div className="mx-auto flex max-w-6xl items-center gap-2 px-3 py-2.5 sm:gap-4 sm:px-4">
+          <div className="mx-auto flex max-w-6xl items-center gap-3 px-3 py-3 sm:gap-4 sm:px-4">
             <Link
               href="/"
               aria-label={`${site.name}, ${site.domain}`}
@@ -38,7 +35,7 @@ export async function SiteHeader() {
             <div className="min-w-0 flex-1">
               <CatalogSearch paths={paths} />
             </div>
-            <div className="hidden items-center gap-5 text-sm text-ink lg:flex">
+            <div className="hidden items-center gap-4 text-sm text-ink lg:flex">
               <a href={`tel:${site.phoneHref}`} className="leading-tight">
                 <span className="block text-xs text-muted">Наш телефон</span>
                 <span className="font-semibold">{site.phone}</span>
@@ -48,36 +45,23 @@ export async function SiteHeader() {
                 <span className="font-semibold">{site.email}</span>
               </a>
             </div>
-            <UserMenu cartCount={count} loggedIn={Boolean(user)} staffRole={user?.staffRole ?? null} />
+            <UserMenu loggedIn={Boolean(user)} staffRole={user?.staffRole ?? null} />
           </div>
         </div>
-        <div className="bg-deep text-white">
+        <div className="hidden bg-deep text-white md:block">
           <div className="mx-auto flex max-w-6xl items-stretch px-3 sm:px-4">
-            <nav className="hidden min-w-0 items-center gap-1 md:flex" aria-label="Разделы сайта">
+            <nav className="flex min-w-0 items-center gap-1" aria-label="Разделы сайта">
               {bar.map((item) => (
                 <Link key={item.href} href={item.href} className="px-3 py-3 text-sm text-white/90 hover:text-white">
                   {item.label}
                 </Link>
               ))}
             </nav>
-            <Link href="/cart" className={`${cartLinkClass} ml-auto`}>
-              <CartGlyph />
-              Корзина{count > 0 ? ` (${count})` : ""}
-            </Link>
           </div>
         </div>
       </header>
-      <MobileNav cartCount={count} loggedIn={Boolean(user)} />
+      <MobileNav loggedIn={Boolean(user)} />
     </>
-  );
-}
-
-function CartGlyph() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="M6 7h12l-1 12H7L6 7z" />
-      <path d="M9 7V6a3 3 0 0 1 6 0v1" />
-    </svg>
   );
 }
 
@@ -100,7 +84,7 @@ export function SiteHeaderSlot() {
 export function SiteFooter() {
   return (
     <footer className="mt-auto border-t border-line bg-white pb-[calc(3.5rem+1px+env(safe-area-inset-bottom))] text-ink lg:pb-0">
-      <div className="mx-auto grid max-w-6xl gap-4 px-3 py-6 text-sm sm:px-4 sm:py-8 md:grid-cols-3">
+      <div className="mx-auto grid max-w-6xl gap-4 px-3 py-6 text-sm sm:px-4 md:grid-cols-3">
         <div>
           <Logo />
           <p className="mt-3 text-muted">{site.tagline}</p>

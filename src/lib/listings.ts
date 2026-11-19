@@ -8,7 +8,7 @@ import {
 import { readListingDescription } from "@/lib/description";
 import { DomainError } from "@/lib/errors";
 import { parseIntStrict, parsePriceToKopeks, parseRublesToKopeks, rubleIssue, parseTenths, textInputLimit } from "@/lib/format";
-import { ensureIndividualSeller } from "@/lib/seller";
+import { buyerListingsEnabled, ensureIndividualSeller } from "@/lib/seller";
 import type { CurrentUser } from "@/lib/session";
 import { readCityPlace } from "@/lib/ru-cities";
 import { slugify } from "@/lib/slug";
@@ -55,6 +55,7 @@ export function readLogisticsAndLead(formData: FormData, price: (raw: string) =>
 }
 
 export async function saveSellerListing(user: CurrentUser, listingId: string | null, formData: FormData) {
+  if (!buyerListingsEnabled) throw new DomainError("Размещение объявлений пока недоступно");
   if (!user.emailVerifiedAt) {
     throw new DomainError("Подтвердите email в профиле, чтобы продавать");
   }
