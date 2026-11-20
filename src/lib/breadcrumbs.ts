@@ -4,7 +4,9 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const labels: Record<string, string> = {
   catalog: "Каталог",
+  cart: "Корзина",
   checkout: "Оформление",
+  privacy: "Политика конфиденциальности",
   favorites: "Избранное",
   history: "История",
   login: "Вход",

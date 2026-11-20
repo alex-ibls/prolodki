@@ -11,7 +11,35 @@ import {
 import { slugify } from "@/lib/slug";
 import { DomainError } from "@/lib/errors";
 
+export function listingSlug(sku: string, nomenclatureId: string) {
+  const base = slugify(sku).slice(0, 48).replace(/-+$/g, "") || "item";
+  return `${base}-${nomenclatureId.replace(/-/g, "").slice(0, 8)}`;
+}
+
+export function listingSlugBroken(slug: string) {
+  return !slug || slug.length > 120 || /[./\\?#%\s]/.test(slug);
+}
+
 type Executor = Tx | typeof db;
+
+function isUniqueViolation(error: unknown) {
+  let current: unknown = error;
+  for (let depth = 0; depth < 4 && current && typeof current === "object"; depth += 1) {
+    if ("code" in current && (current as { code?: string }).code === "23505") return true;
+    current = "cause" in current ? (current as { cause?: unknown }).cause : null;
+  }
+  return false;
+}
+
+async function freeListingSlug(executor: Executor, preferred: string, keepId?: string) {
+  let slug = preferred;
+  for (let n = 2; n < 30; n += 1) {
+    const taken = await executor.query.listings.findFirst({ where: eq(listings.slug, slug) });
+    if (!taken || taken.id === keepId) return slug;
+    slug = `${preferred}-${n}`;
+  }
+  return `${preferred}-${crypto.randomUUID().slice(0, 8)}`;
+}
 
 export function availableOf(item: { quantityOnHand: number; quantityReserved: number }) {
   return item.quantityOnHand - item.quantityReserved;
@@ -70,15 +98,19 @@ export async function syncPublishedListing(executor: Executor, nomenclatureId: s
     updatedAt: new Date(),
   };
 
+  const slug =
+    existing && !listingSlugBroken(existing.slug)
+      ? existing.slug
+      : await freeListingSlug(executor, listingSlug(item.sku, item.id), existing?.id);
   let listingId = existing?.id;
   if (!existing) {
-    const [created] = await executor
-      .insert(listings)
-      .values({ ...values, slug: `${slugify(item.sku)}-${item.sku.toLowerCase()}` })
-      .returning();
+    const [created] = await executor.insert(listings).values({ ...values, slug }).returning();
     listingId = created.id;
   } else {
-    await executor.update(listings).set(values).where(eq(listings.id, existing.id));
+    await executor
+      .update(listings)
+      .set(listingSlugBroken(existing.slug) ? { ...values, slug } : values)
+      .where(eq(listings.id, existing.id));
   }
 
   await executor.delete(listingAttributes).where(eq(listingAttributes.listingId, listingId!));
@@ -95,6 +127,40 @@ export async function syncPublishedListing(executor: Executor, nomenclatureId: s
     );
   }
   return listingId!;
+}
+
+let slugRepair: Promise<void> | null = null;
+
+export function ensureSafeListingSlugs() {
+  slugRepair ??= repairUnsafeListingSlugs().catch(() => {
+    slugRepair = null;
+  });
+  return slugRepair;
+}
+
+async function repairUnsafeListingSlugs() {
+  const rows = await db
+    .select({
+      id: listings.id,
+      slug: listings.slug,
+      sku: nomenclature.sku,
+      nomenclatureId: nomenclature.id,
+    })
+    .from(listings)
+    .innerJoin(nomenclature, eq(listings.nomenclatureId, nomenclature.id));
+  for (const row of rows) {
+    if (!listingSlugBroken(row.slug)) continue;
+    const slug = await freeListingSlug(db, listingSlug(row.sku, row.nomenclatureId), row.id);
+    try {
+      await db.update(listings).set({ slug, updatedAt: new Date() }).where(eq(listings.id, row.id));
+    } catch (error) {
+      if (!isUniqueViolation(error)) throw error;
+      await db
+        .update(listings)
+        .set({ slug: `${slug}-${row.id.replace(/-/g, "").slice(8, 12)}`, updatedAt: new Date() })
+        .where(eq(listings.id, row.id));
+    }
+  }
 }
 
 export async function writeStockMovement(

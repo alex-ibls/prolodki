@@ -1,10 +1,10 @@
-import { saveNomenclatureAction } from "@/actions/admin";
 import { BrandModelFields } from "@/components/brand-model-fields";
 import { KitEditor } from "@/components/kit-editor";
 import { CategoryFields } from "@/components/category-fields";
 import { LimitedText } from "@/components/limited-text";
+import { NomenclatureFormShell } from "@/components/nomenclature-form-shell";
 import { PhotoField } from "@/components/photo-field";
-import { buttonClass, inputClass } from "@/components/styles";
+import { inputClass } from "@/components/styles";
 import { allCategories } from "@/lib/catalog";
 import { effectiveCharacteristicsFor } from "@/lib/characteristics";
 import { kitForNomenclature, listKitLibrary } from "@/lib/kit";
@@ -56,9 +56,7 @@ export async function NomenclatureForm({ item, error }: { item?: Item; error?: s
     else if (attr.valueNumber !== null) values[attr.definition.code] = String(attr.valueNumber);
   }
   return (
-    <form action={saveNomenclatureAction} className="grid gap-3 rounded-3xl border border-line bg-card p-4">
-      {item ? <input type="hidden" name="id" value={item.id} /> : null}
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
+    <NomenclatureFormShell itemId={item?.id} serverError={error}>
       <div className="grid gap-3 md:grid-cols-2">
         <label className="text-sm">
           Артикул
@@ -134,7 +132,6 @@ export async function NomenclatureForm({ item, error }: { item?: Item; error?: s
         <input name="publish" type="checkbox" defaultChecked={item?.isPublished ?? true} />
         Опубликовать на витрине
       </label>
-      <button className={buttonClass}>Сохранить</button>
-    </form>
+    </NomenclatureFormShell>
   );
 }

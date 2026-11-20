@@ -229,7 +229,7 @@ export function ProductCard({ item }: { item: CardData }) {
         <span className="block border-t border-line" />
       )}
       {item.configurable ? (
-        <Link href={`/product/${item.slug}/configurator`} className={`${actionClass} w-full`} style={{ borderRadius: 0 }}>
+        <Link href={`/product/${item.slug}`} className={`${actionClass} w-full`} style={{ borderRadius: 0 }}>
           {item.quantity > 0 ? "Купить" : "Заказать"}
         </Link>
       ) : null}

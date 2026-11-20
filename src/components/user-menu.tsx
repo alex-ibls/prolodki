@@ -24,9 +24,11 @@ function MenuLinks({ items, pathname }: { items: { href: string; label: string }
 }
 
 export function UserMenu({
+  cartCount,
   loggedIn,
   staffRole,
 }: {
+  cartCount: number;
   loggedIn: boolean;
   staffRole: StaffRole;
 }) {
@@ -58,6 +60,7 @@ export function UserMenu({
   const buyer = [
     { href: "/favorites", label: "Избранное" },
     { href: "/history", label: "История" },
+    { href: "/cart", label: cartCount > 0 ? `Корзина (${cartCount})` : "Корзина" },
     { href: loggedIn ? "/account/orders" : "/orders", label: "Заказы" },
   ];
   const work = [
@@ -90,6 +93,11 @@ export function UserMenu({
             <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
         )}
+        {cartCount > 0 ? (
+          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-moss px-1 text-[11px] font-semibold text-white">
+            {cartCount}
+          </span>
+        ) : null}
       </button>
       {open ? (
         <nav

@@ -1,10 +1,12 @@
 "use server";
 
 import { and, eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { customers, dealNotes, deals, listings, users } from "@/db/schema";
-import { DomainError } from "@/lib/errors";
+import { customers, dealNotes, deals, listings, nomenclature, users } from "@/db/schema";
+import { DomainError, isNextNavigation } from "@/lib/errors";
+import type { NomenclatureSaveState } from "@/lib/nomenclature-save";
 import { parseIntStrict, parsePriceToKopeks } from "@/lib/format";
 import { readOnOrder } from "@/lib/labels";
 import { requireManager, runAction } from "@/lib/guards";
@@ -145,10 +147,23 @@ function nomenclatureInput(formData: FormData) {
   return { price, compareAt, year, quantity };
 }
 
-export async function saveNomenclatureAction(formData: FormData) {
-  const id = String(formData.get("id") || "") || null;
-  const back = id ? `/admin/nomenclature/${id}` : "/admin/nomenclature/new";
-  await runAction(back, async (user) => {
+async function recoverCreatedId(formData: FormData, message: string) {
+  const sku = String(formData.get("sku") || "").trim().toUpperCase();
+  if (!sku) return null;
+  const row = await db.query.nomenclature.findFirst({ where: eq(nomenclature.sku, sku) });
+  if (!row) return null;
+  if (message === "Такой артикул уже есть") return row.id;
+  if (Date.now() - row.createdAt.getTime() < 2 * 60 * 1000) return row.id;
+  return null;
+}
+
+export async function saveNomenclatureAction(
+  _prev: NomenclatureSaveState,
+  formData: FormData,
+): Promise<NomenclatureSaveState> {
+  const user = await requireManager();
+  let id = String(formData.get("id") || "") || null;
+  try {
     if (user.staffRole !== "manager") throw new DomainError("Номенклатура доступна менеджеру");
     const categoryId = Number(formData.get("categoryId"));
     if (!categoryId) throw new DomainError("Выберите категорию");
@@ -156,7 +171,7 @@ export async function saveNomenclatureAction(formData: FormData) {
     const brand = await ensureBrandName(String(formData.get("brand") || ""));
     const parsed = nomenclatureInput(formData);
     const defs = await defsForCategory(categoryId);
-    const saved = await saveNomenclatureItem(user.id, id, {
+    id = await saveNomenclatureItem(user.id, id, {
       sku: String(formData.get("sku") || ""),
       categoryId,
       title: String(formData.get("title") || ""),
@@ -177,10 +192,32 @@ export async function saveNomenclatureAction(formData: FormData) {
       publish: formData.get("publish") === "on",
       attributes: readAttributeValues(formData, defs),
     });
-    await saveNomenclatureKit(saved, formData);
-    await attachNomenclaturePhotos(saved, formData);
-    redirect(`/admin/nomenclature/${saved}?saved=1`);
-  });
+    await saveNomenclatureKit(id, formData);
+    await attachNomenclaturePhotos(id, formData);
+    revalidatePath("/admin/nomenclature");
+    revalidatePath(`/admin/nomenclature/${id}`);
+    revalidatePath("/");
+    const [listing] = await db
+      .select({ slug: listings.slug })
+      .from(listings)
+      .where(eq(listings.nomenclatureId, id))
+      .limit(1);
+    if (listing && !listing.slug.includes("/")) revalidatePath(`/product/${listing.slug}`);
+    return { id, href: `/admin/nomenclature/${id}?saved=1`, error: null, nonce: crypto.randomUUID() };
+  } catch (error) {
+    if (isNextNavigation(error)) throw error;
+    const message = error instanceof DomainError ? error.message : "Не получилось сохранить карточку";
+    const target = id ?? (await recoverCreatedId(formData, message));
+    if (target) {
+      return {
+        id: target,
+        href: `/admin/nomenclature/${target}?error=${encodeURIComponent(message)}`,
+        error: message,
+        nonce: crypto.randomUUID(),
+      };
+    }
+    return { id: null, href: null, error: message, nonce: crypto.randomUUID() };
+  }
 }
 
 export type ImportState = ImportReport | { error: string } | null;

@@ -1,9 +1,11 @@
 import { asc, eq } from "drizzle-orm";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { nomenclature, nomenclatureImages } from "@/db/schema";
+import { listings, nomenclature, nomenclatureImages } from "@/db/schema";
 import { CrumbTitle } from "@/components/breadcrumbs";
 import { NomenclatureForm } from "@/components/nomenclature-form";
+import { secondaryClass } from "@/components/styles";
 import { formatDate } from "@/lib/format";
 import { stockReasonLabel } from "@/lib/labels";
 import { requireManager } from "@/lib/guards";
@@ -28,13 +30,39 @@ export default async function NomenclatureItemPage({
     },
   });
   if (!item) notFound();
+  const [listing] = await db
+    .select({ slug: listings.slug, status: listings.status })
+    .from(listings)
+    .where(eq(listings.nomenclatureId, item.id))
+    .limit(1);
   const movements = [...item.movements].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 20);
+  const saved = one("saved");
+  const error = one("error");
   return (
     <main className="grid gap-6">
       <CrumbTitle label={item.sku} />
-      <h1 className="text-3xl">{item.sku}</h1>
-      {one("saved") ? <p className="text-sm text-moss">Сохранено.</p> : null}
-      <NomenclatureForm item={item} error={one("error")} />
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-sm text-muted">Редактирование</p>
+          <h1 className="text-3xl">{item.sku}</h1>
+        </div>
+        {listing?.status === "published" ? (
+          <Link href={`/product/${listing.slug}`} className={secondaryClass}>
+            Открыть на витрине
+          </Link>
+        ) : null}
+      </div>
+      {saved ? (
+        <p className="save-banner rounded-md bg-foam px-4 py-3 text-sm text-deep" role="status">
+          Карточка сохранена.
+        </p>
+      ) : null}
+      {error ? (
+        <p className="save-banner rounded-md bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <NomenclatureForm item={item} />
       <section>
         <h2 className="text-xl">Журнал остатков</h2>
         <ul className="mt-3 space-y-2 text-sm">

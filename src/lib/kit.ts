@@ -138,7 +138,9 @@ export async function saveNomenclatureKit(nomenclatureId: string, formData: Form
 
 export async function quoteKit(nomenclatureId: string | null, options: string) {
   const ids = [...new Set(options.split(",").map((item) => item.trim()).filter(Boolean))];
-  if (ids.length === 0) return { extraKopeks: 0, names: [] as string[], ids: [] as string[] };
+  if (ids.length === 0) {
+    return { extraKopeks: 0, names: [] as string[], ids: [] as string[], lines: [] as { name: string; priceKopeks: number }[] };
+  }
   if (!nomenclatureId) throw new DomainError("Комплектация для этого товара недоступна");
   const groups = await kitForNomenclature(nomenclatureId);
   const placed = new Map<string, { groupId: string; kind: KitKind; name: string; priceKopeks: number }>();
@@ -154,14 +156,16 @@ export async function quoteKit(nomenclatureId: string | null, options: string) {
     }
   }
   const names: string[] = [];
+  const lines: { name: string; priceKopeks: number }[] = [];
   let extraKopeks = 0;
   for (const id of ids) {
     const item = placed.get(id);
     if (!item) throw new DomainError("Выбранный элемент комплектации больше недоступен");
     names.push(item.name);
+    lines.push({ name: item.name, priceKopeks: item.priceKopeks });
     extraKopeks += item.priceKopeks;
   }
-  return { extraKopeks, names, ids };
+  return { extraKopeks, names, ids, lines };
 }
 
 function readKitPrice(raw: string) {

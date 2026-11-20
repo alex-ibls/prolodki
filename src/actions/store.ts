@@ -9,8 +9,7 @@ import { cartItems, customers, users } from "@/db/schema";
 import { claimGuestSession, recordListingEvent } from "@/lib/activity";
 import { type AuthFormState, captchaError, firstFormError, loginSchema, registerSchema } from "@/lib/auth-fields";
 import { verifyCaptcha } from "@/lib/captcha";
-import { assertCartQty, getOrCreateCart } from "@/lib/cart";
-import { quoteKit } from "@/lib/kit";
+import { assertCartQty, getOrCreateCart, upsertCartItem } from "@/lib/cart";
 import { DomainError, isNextNavigation } from "@/lib/errors";
 import { readGuestToken } from "@/lib/guest";
 import { runAction } from "@/lib/guards";
@@ -145,25 +144,37 @@ export async function saveListingAction(formData: FormData) {
   });
 }
 
-export async function addToCartAction(formData: FormData) {
-  const listingId = String(formData.get("listingId") || "");
-  const slug = String(formData.get("slug") || "");
-  const qty = Number(formData.get("qty") || 1);
+export async function saveConfigurationAction(listingId: string, optionIds: string[]) {
   try {
-    const listing = await assertCartQty(listingId, qty);
-    const picked = await quoteKit(listing.nomenclatureId, formData.getAll("option").map(String).join(","));
-    const options = picked.ids.join(",");
+    const { cart, created } = await upsertCartItem(listingId, optionIds);
+    if (!created) return;
     const user = await getCurrentUser();
-    if (user && listing.sellerUserId === user.id) throw new DomainError("Нельзя купить свой товар");
-    const cart = await getOrCreateCart();
-    await db.delete(cartItems).where(eq(cartItems.cartId, cart.id));
-    await db.insert(cartItems).values({ cartId: cart.id, listingId, qty, options });
     await recordListingEvent({
       listingId,
       kind: "cart_add",
       userId: user?.id ?? null,
       guestToken: cart.guestToken,
     });
+  } catch (error) {
+    if (isNextNavigation(error)) throw error;
+  }
+}
+
+export async function addToCartAction(formData: FormData) {
+  const listingId = String(formData.get("listingId") || "");
+  const slug = String(formData.get("slug") || "");
+  const qty = Number(formData.get("qty") || 1);
+  try {
+    const { cart, created } = await upsertCartItem(listingId, formData.getAll("option").map(String), qty);
+    if (created) {
+      const user = await getCurrentUser();
+      await recordListingEvent({
+        listingId,
+        kind: "cart_add",
+        userId: user?.id ?? null,
+        guestToken: cart.guestToken,
+      });
+    }
   } catch (error) {
     if (isNextNavigation(error)) throw error;
     const message = error instanceof DomainError ? error.message : "Не удалось оформить заказ";
@@ -214,6 +225,9 @@ export async function checkoutAction(formData: FormData) {
     const phone = String(formData.get("phone") || "").trim();
     const city = String(formData.get("city") || "").trim();
     if (contactName.length < 2 || phone.length < 6) throw new DomainError("Укажите имя и телефон");
+    if (formData.get("consent") !== "yes") {
+      throw new DomainError("Подтвердите согласие на обработку персональных данных");
+    }
     const cart = await getOrCreateCart();
     const orderId = await placeOrder(user ? { id: user.id, email: user.email } : null, cart.guestToken, cart.id, {
       paymentMethod: payment,

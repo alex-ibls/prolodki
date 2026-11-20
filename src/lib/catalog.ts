@@ -9,6 +9,7 @@ import {
   listings,
   nomenclatureKitGroups,
 } from "@/db/schema";
+import { ensureSafeListingSlugs } from "@/lib/stock";
 import { ancestorChainIds, withoutDemo } from "@/lib/taxonomy";
 
 export type CatalogQuery = {
@@ -92,6 +93,7 @@ export function catalogQueryFromSearchParams(params: URLSearchParams): CatalogQu
 
 export async function searchCatalog(query: CatalogQuery, options?: { countOnly?: boolean }) {
   await ensureSearch();
+  await ensureSafeListingSlugs();
   const categoryRows = withoutDemo(await allCategories());
   const conditions: SQL[] = [eq(listings.status, "published")];
 
@@ -206,12 +208,9 @@ export async function searchCatalog(query: CatalogQuery, options?: { countOnly?:
   const page = Math.max(1, Number(query.page) || 1);
   const order = [];
   if (query.priceSort === "asc") order.push(asc(listings.priceKopeks));
-  if (query.priceSort === "desc") order.push(desc(listings.priceKopeks));
-  if (term && !query.priceSort) {
-    order.push(desc(sql`ts_rank_cd(${listings.searchVector}, listings_search_query(${term}))`));
-  }
+  else if (query.priceSort === "desc") order.push(desc(listings.priceKopeks));
   order.push(desc(listings.createdAt));
-  order.push(asc(listings.id));
+  order.push(desc(listings.id));
 
   const [totalRow] = await db
     .select({ count: sql<number>`count(*)::int` })

@@ -16,8 +16,10 @@ export const secondaryClass =
 export const panelClass = "rounded-3xl border border-line bg-card p-4";
 
 export const brandBarClass = "bg-deep text-white";
+export const cartLinkClass =
+  "btn inline-flex items-center gap-2 bg-moss px-4 py-3 text-sm font-semibold text-white hover:bg-moss-hover";
 
-export const pageFrame = "mx-auto w-full px-3 pb-4 sm:px-4 sm:pb-6";
+export const pageFrame = "mx-auto w-full max-w-6xl px-3 pb-4 sm:px-4 sm:pb-6";
 
 export const mobileDockClass =
   "fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-30 flex items-center gap-2 border-t border-line bg-white px-3 py-2 md:static md:z-auto md:mt-4 md:border-0 md:bg-transparent md:px-0 md:py-0";

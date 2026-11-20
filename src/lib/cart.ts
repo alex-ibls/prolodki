@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { cartItems, carts, listings } from "@/db/schema";
 import { DomainError } from "@/lib/errors";
 import { ensureGuestToken, readGuestToken } from "@/lib/guest";
+import { quoteKit } from "@/lib/kit";
 import { getCurrentUser } from "@/lib/session";
 
 async function createCart(input: { userId?: string; guestToken?: string }) {
@@ -91,6 +92,38 @@ export async function mergeGuestCart(userId: string, guestToken: string | undefi
   }
   await db.delete(cartItems).where(eq(cartItems.cartId, guest.id));
   await db.delete(carts).where(eq(carts.id, guest.id));
+}
+
+export async function cartOptionsForListing(listingId: string) {
+  const cart = await readCart();
+  if (!cart) return [] as string[];
+  const [item] = await db
+    .select({ options: cartItems.options })
+    .from(cartItems)
+    .where(and(eq(cartItems.cartId, cart.id), eq(cartItems.listingId, listingId)));
+  return (item?.options ?? "").split(",").map((id) => id.trim()).filter(Boolean);
+}
+
+export async function upsertCartItem(listingId: string, optionIds: string[], qty?: number) {
+  const listing = await assertCartQty(listingId, qty ?? 1);
+  const user = await getCurrentUser();
+  if (user && listing.sellerUserId === user.id) throw new DomainError("Нельзя купить свой товар");
+  const picked = await quoteKit(listing.nomenclatureId, optionIds.join(","));
+  const cart = await getOrCreateCart();
+  const options = picked.ids.join(",");
+  const [existing] = await db
+    .select({ qty: cartItems.qty })
+    .from(cartItems)
+    .where(and(eq(cartItems.cartId, cart.id), eq(cartItems.listingId, listingId)));
+  if (existing) {
+    await db
+      .update(cartItems)
+      .set(qty == null ? { options } : { options, qty })
+      .where(and(eq(cartItems.cartId, cart.id), eq(cartItems.listingId, listingId)));
+  } else {
+    await db.insert(cartItems).values({ cartId: cart.id, listingId, qty: qty ?? 1, options });
+  }
+  return { cart, listing, created: !existing };
 }
 
 export async function assertCartQty(listingId: string, qty: number) {

@@ -4,6 +4,8 @@ import { Logo } from "@/components/logo";
 import { MobileNav } from "@/components/mobile-nav";
 import { CatalogSearch } from "@/components/catalog-search";
 import { UserMenu } from "@/components/user-menu";
+import { cartLinkClass } from "@/components/styles";
+import { cartCount } from "@/lib/cart";
 import { allCategories } from "@/lib/catalog";
 import { categoryPathMap } from "@/lib/sef";
 import { withoutDemo } from "@/lib/taxonomy";
@@ -12,6 +14,7 @@ import { getCurrentUser } from "@/lib/session";
 
 export async function SiteHeader() {
   const user = await getCurrentUser();
+  const count = await cartCount();
   const paths = categoryPathMap(withoutDemo(await allCategories()));
   const bar = [
     { href: "/", label: "Главная" },
@@ -45,7 +48,7 @@ export async function SiteHeader() {
                 <span className="font-semibold">{site.email}</span>
               </a>
             </div>
-            <UserMenu loggedIn={Boolean(user)} staffRole={user?.staffRole ?? null} />
+            <UserMenu cartCount={count} loggedIn={Boolean(user)} staffRole={user?.staffRole ?? null} />
           </div>
         </div>
         <div className="hidden bg-deep text-white md:block">
@@ -57,11 +60,24 @@ export async function SiteHeader() {
                 </Link>
               ))}
             </nav>
+            <Link href="/cart" className={`${cartLinkClass} ml-auto`}>
+              <CartGlyph />
+              Корзина{count > 0 ? ` (${count})` : ""}
+            </Link>
           </div>
         </div>
       </header>
-      <MobileNav loggedIn={Boolean(user)} />
+      <MobileNav cartCount={count} loggedIn={Boolean(user)} />
     </>
+  );
+}
+
+function CartGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M6 7h12l-1 12H7L6 7z" />
+      <path d="M9 7V6a3 3 0 0 1 6 0v1" />
+    </svg>
   );
 }
 
@@ -96,7 +112,12 @@ export function SiteFooter() {
           <p className="mt-1">{site.email}</p>
           <p className="mt-1 text-muted">{site.hours}</p>
         </div>
-        <p>{site.address}</p>
+        <div>
+          <p>{site.address}</p>
+          <Link href="/privacy" className="mt-2 inline-block text-muted hover:text-deep">
+            Политика конфиденциальности
+          </Link>
+        </div>
       </div>
     </footer>
   );
