@@ -45,6 +45,14 @@ export function specValue(spec: SpecSource) {
   return unit === "°" ? `${raw}${unit}` : `${raw} ${unit}`;
 }
 
+function specAmount(spec: SpecSource) {
+  const text = spec.valueText?.trim() ?? "";
+  const raw = text || (spec.valueNumber === null ? "" : String(spec.valueNumber));
+  const unit = spec.definition.unit.trim();
+  if (unit && raw.endsWith(unit)) return raw.slice(0, -unit.length).trim();
+  return raw;
+}
+
 export function highlightSpecs(item: { attributes: SpecSource[] }) {
   return item.attributes
     .filter((attr) => attr.definition.featured && (attr.valueNumber !== null || Boolean(attr.valueText?.trim())))
@@ -154,7 +162,7 @@ export function ProductCard({ item }: { item: CardData }) {
           {specs.map((spec) => (
             <span key={spec.definition.code} className="inline-flex items-center gap-1 whitespace-nowrap">
               <SpecIcon icon={spec.definition.icon || ""} className="h-4 w-4 shrink-0 text-deep" />
-              {specValue(spec)}
+              {specAmount(spec)}
             </span>
           ))}
         </span>
