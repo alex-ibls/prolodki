@@ -84,6 +84,7 @@ export const nomenclatureColumns: AdminColumn[] = [
   { key: "reserved", label: "Резерв" },
   { key: "available", label: "Доступно", sort: "available", firstDir: "desc" },
   { key: "published", label: "Витрина" },
+  { key: "created", label: "Дата добавления", sort: "created", firstDir: "desc" },
 ];
 
 export const orderColumns: AdminColumn[] = [
@@ -242,7 +243,7 @@ export async function listBrands(one: Reader, scope?: Scope): Promise<AdminPage>
 }
 
 export async function listNomenclature(one: Reader, scope?: Scope): Promise<AdminPage> {
-  const state = readList(one, ["sku", "title", "price", "stock", "available"], "sku", "asc");
+  const state = readList(one, ["sku", "title", "price", "stock", "available", "created"], "created", "desc");
   const published = one("published");
   const category = one("category");
   const categoryId = Number(category);
@@ -263,7 +264,9 @@ export async function listNomenclature(one: Reader, scope?: Scope): Promise<Admi
           ? nomenclature.quantityOnHand
           : state.sort === "available"
             ? available
-            : nomenclature.sku;
+            : state.sort === "created"
+              ? nomenclature.createdAt
+              : nomenclature.sku;
   return finish(
     state,
     scope,
@@ -283,11 +286,12 @@ export async function listNomenclature(one: Reader, scope?: Scope): Promise<Admi
           quantityReserved: nomenclature.quantityReserved,
           isPublished: nomenclature.isPublished,
           categoryName: categories.name,
+          createdAt: nomenclature.createdAt,
         })
         .from(nomenclature)
         .leftJoin(categories, eq(nomenclature.categoryId, categories.id))
         .where(where)
-        .orderBy(state.dir === "asc" ? asc(column) : desc(column), asc(nomenclature.sku))
+        .orderBy(state.dir === "asc" ? asc(column) : desc(column), desc(nomenclature.createdAt), asc(nomenclature.sku))
         .limit(limit)
         .offset(offset);
       return rows.map((row) => ({
@@ -302,6 +306,7 @@ export async function listNomenclature(one: Reader, scope?: Scope): Promise<Admi
           reserved: String(row.quantityReserved),
           available: String(availableOf(row)),
           published: row.isPublished ? "Да" : "Нет",
+          created: when(row.createdAt),
         },
       }));
     },

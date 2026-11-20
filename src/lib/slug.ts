@@ -14,3 +14,9 @@ export function slugify(input: string) {
     .slice(0, 70);
   return slug || "item";
 }
+
+export function productSlug(title: string, id: string) {
+  const name = slugify(title).slice(0, 60).replace(/-+$/g, "") || "tovar";
+  const token = id.replace(/-/g, "").toLowerCase();
+  return `${name}-${token}`;
+}

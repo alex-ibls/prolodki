@@ -67,6 +67,7 @@ export default async function CategoryDetailPage({
                   {item.unit ? <span className="text-muted">, {item.unit}</span> : null}
                   <span className="text-muted"> · {item.dataType === "text" ? "текст" : "число"}</span>
                   {item.filterable ? <span className="text-muted"> · в фильтре</span> : null}
+                  {item.featured ? <span className="text-muted"> · основные</span> : null}
                 </span>
                 <Link href={`/admin/catalog/${item.categoryId}`} className="text-navy">
                   {item.source}
@@ -79,7 +80,7 @@ export default async function CategoryDetailPage({
       <CharacteristicForm
         action={saveCategoryCharacteristicsAction}
         title="Свои характеристики"
-        hint="Новое поле действует в этом разделе и во всех вложенных. Характеристику верхнего раздела повторять не нужно. «В фильтре» показывает поле в каталоге, когда значения различаются."
+        hint="Новое поле действует в этом разделе и во всех вложенных. Характеристику верхнего раздела повторять не нужно. «Основные» выводятся над фото и кнопкой заказа. «В фильтре» показывает поле в каталоге, когда значения различаются."
         rows={specs.map((item) => ({
           id: item.id,
           name: item.name,
@@ -87,6 +88,8 @@ export default async function CategoryDetailPage({
           dataType: item.dataType,
           sort: item.cardOrder,
           filterable: item.filterable,
+          featured: item.featured,
+          icon: item.icon,
         }))}
         showFilter
         nextSort={sortOf + 1}

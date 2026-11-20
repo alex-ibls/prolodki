@@ -1,4 +1,5 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
+import { readCharacteristicIcon } from "@/components/spec-icon";
 import { db } from "@/db";
 import { attributeDefs, categories, listingAttributes, nomenclatureAttributes } from "@/db/schema";
 import { DomainError } from "@/lib/errors";
@@ -14,7 +15,9 @@ type Draft = {
   unit: string;
   dataType: "number" | "text";
   sort: number;
+  icon: string;
   filterable: boolean;
+  featured: boolean;
   remove: boolean;
 };
 
@@ -38,6 +41,12 @@ function readName(raw: string) {
   return name;
 }
 
+function readIcon(raw: string) {
+  const icon = readCharacteristicIcon(raw);
+  if (icon === null) throw new DomainError("Выберите иконку из списка");
+  return icon;
+}
+
 function readUnit(raw: string) {
   const unit = raw.trim();
   if (unit.length > 16) throw new DomainError("Единица измерения — не больше 16 символов");
@@ -50,11 +59,13 @@ function readDrafts(formData: FormData, withFilter: boolean): { rows: Draft[]; c
   const units = formData.getAll("defUnit").map(String);
   const types = formData.getAll("defType").map(String);
   const sorts = formData.getAll("defSort").map(String);
-  if (ids.length !== names.length || ids.length !== units.length || ids.length !== types.length || ids.length !== sorts.length) {
+  const icons = formData.getAll("defIcon").map(String);
+  if (ids.length !== names.length || ids.length !== units.length || ids.length !== types.length || ids.length !== sorts.length || ids.length !== icons.length) {
     throw new DomainError("Не удалось прочитать характеристики");
   }
   if (ids.length > 80) throw new DomainError("Слишком много характеристик");
   const filters = new Set(formData.getAll("defFilter").map(String));
+  const featured = new Set(formData.getAll("defFeatured").map(String));
   const removed = new Set(formData.getAll("defDelete").map(String));
   const rows = ids.map((id, index) => {
     const numeric = Number(id);
@@ -65,7 +76,9 @@ function readDrafts(formData: FormData, withFilter: boolean): { rows: Draft[]; c
       unit: readUnit(units[index]),
       dataType: readType(types[index]),
       sort: readSort(sorts[index]),
+      icon: readIcon(icons[index]),
       filterable: withFilter && filters.has(id),
+      featured: featured.has(id),
       remove: removed.has(id),
     };
   });
@@ -76,7 +89,9 @@ function readDrafts(formData: FormData, withFilter: boolean): { rows: Draft[]; c
         unit: readUnit(String(formData.get("newUnit") || "")),
         dataType: readType(String(formData.get("newType") || "number")),
         sort: readSort(String(formData.get("newSort") || "")),
+        icon: readIcon(String(formData.get("newIcon") || "")),
         filterable: withFilter && formData.get("newFilter") === "1",
+        featured: formData.get("newFeatured") === "1",
       }
     : null;
   return { rows, created };
@@ -141,7 +156,7 @@ export async function saveCategoryCharacteristics(categoryId: number, formData: 
       if (row.remove) continue;
       await tx
         .update(attributeDefs)
-        .set({ name: row.name, unit: row.unit, dataType: row.dataType, cardOrder: row.sort, filterable: row.filterable })
+        .set({ name: row.name, unit: row.unit, dataType: row.dataType, cardOrder: row.sort, icon: row.icon, filterable: row.filterable, featured: row.featured })
         .where(and(eq(attributeDefs.id, row.id), eq(attributeDefs.categoryId, categoryId)));
     }
     if (created) {
@@ -153,7 +168,9 @@ export async function saveCategoryCharacteristics(categoryId: number, formData: 
         unit: created.unit,
         dataType: created.dataType,
         cardOrder: created.sort,
+        icon: created.icon,
         filterable: created.filterable,
+        featured: created.featured,
       });
     }
   });

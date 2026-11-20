@@ -8,16 +8,11 @@ import {
   stockMovements,
   organizations,
 } from "@/db/schema";
-import { slugify } from "@/lib/slug";
+import { productSlug } from "@/lib/slug";
 import { DomainError } from "@/lib/errors";
 
-export function listingSlug(sku: string, nomenclatureId: string) {
-  const base = slugify(sku).slice(0, 48).replace(/-+$/g, "") || "item";
-  return `${base}-${nomenclatureId.replace(/-/g, "").slice(0, 8)}`;
-}
-
-export function listingSlugBroken(slug: string) {
-  return !slug || slug.length > 120 || /[./\\?#%\s]/.test(slug);
+export async function listingSlugFor(executor: Executor, title: string, id: string, keepId?: string) {
+  return freeListingSlug(executor, productSlug(title, id), keepId);
 }
 
 type Executor = Tx | typeof db;
@@ -98,19 +93,12 @@ export async function syncPublishedListing(executor: Executor, nomenclatureId: s
     updatedAt: new Date(),
   };
 
-  const slug =
-    existing && !listingSlugBroken(existing.slug)
-      ? existing.slug
-      : await freeListingSlug(executor, listingSlug(item.sku, item.id), existing?.id);
-  let listingId = existing?.id;
+  const listingId = existing?.id ?? crypto.randomUUID();
+  const slug = await listingSlugFor(executor, item.title, listingId, existing?.id);
   if (!existing) {
-    const [created] = await executor.insert(listings).values({ ...values, slug }).returning();
-    listingId = created.id;
+    await executor.insert(listings).values({ ...values, id: listingId, slug });
   } else {
-    await executor
-      .update(listings)
-      .set(listingSlugBroken(existing.slug) ? { ...values, slug } : values)
-      .where(eq(listings.id, existing.id));
+    await executor.update(listings).set({ ...values, slug }).where(eq(listings.id, listingId));
   }
 
   await executor.delete(listingAttributes).where(eq(listingAttributes.listingId, listingId!));
@@ -139,26 +127,16 @@ export function ensureSafeListingSlugs() {
 }
 
 async function repairUnsafeListingSlugs() {
-  const rows = await db
-    .select({
-      id: listings.id,
-      slug: listings.slug,
-      sku: nomenclature.sku,
-      nomenclatureId: nomenclature.id,
-    })
-    .from(listings)
-    .innerJoin(nomenclature, eq(listings.nomenclatureId, nomenclature.id));
+  const rows = await db.select({ id: listings.id, slug: listings.slug, title: listings.title }).from(listings);
   for (const row of rows) {
-    if (!listingSlugBroken(row.slug)) continue;
-    const slug = await freeListingSlug(db, listingSlug(row.sku, row.nomenclatureId), row.id);
+    const desired = productSlug(row.title, row.id);
+    if (row.slug === desired) continue;
+    const slug = await freeListingSlug(db, desired, row.id);
+    if (slug === row.slug) continue;
     try {
-      await db.update(listings).set({ slug, updatedAt: new Date() }).where(eq(listings.id, row.id));
+      await db.update(listings).set({ slug }).where(eq(listings.id, row.id));
     } catch (error) {
       if (!isUniqueViolation(error)) throw error;
-      await db
-        .update(listings)
-        .set({ slug: `${slug}-${row.id.replace(/-/g, "").slice(8, 12)}`, updatedAt: new Date() })
-        .where(eq(listings.id, row.id));
     }
   }
 }

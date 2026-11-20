@@ -132,27 +132,25 @@ export function ProductGallery({
             <div key={image.path} className="relative min-w-full shrink-0 basis-full snap-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={`/media/${image.path}`} alt="" className="pointer-events-none aspect-[4/3] w-full object-cover" />
-              {images.length > 1 ? (
-                <Zone label="Предыдущее фото" className="left-0 w-[30%]" onTap={() => shift(-1)} onDown={armDrag} onMove={noteDrag} ready={tapped} />
-              ) : null}
               <Zone
                 label={`Открыть ${title}`}
-                className={images.length > 1 ? "left-[30%] w-[40%]" : "inset-x-0"}
+                className="inset-x-0"
                 onTap={openViewer}
                 onDown={armDrag}
                 onMove={noteDrag}
                 ready={tapped}
               />
-              {images.length > 1 ? (
-                <Zone label="Следующее фото" className="right-0 w-[30%]" onTap={() => shift(1)} onDown={armDrag} onMove={noteDrag} ready={tapped} />
-              ) : null}
             </div>
           ))}
         </div>
         {images.length > 1 ? (
-          <p className="pointer-events-none absolute bottom-3 right-3 rounded-md bg-moss px-2.5 py-1 text-xs font-semibold text-white">
-            {index + 1} / {images.length}
-          </p>
+          <>
+            <PhotoArrow side="left" hidden={index === 0} onClick={() => shift(-1)} />
+            <PhotoArrow side="right" hidden={index === images.length - 1} onClick={() => shift(1)} />
+            <p className="pointer-events-none absolute bottom-3 right-3 rounded-md bg-moss px-2.5 py-1 text-xs font-semibold text-white">
+              {index + 1} / {images.length}
+            </p>
+          </>
         ) : null}
       </div>
       {images.length > 1 ? (
@@ -250,6 +248,25 @@ export function ProductGallery({
 
 function viewerModeClass(active: boolean) {
   return `flex h-10 w-10 items-center justify-center ${active ? "text-deep" : "text-deep/45"}`;
+}
+
+function PhotoArrow({ side, hidden, onClick }: { side: "left" | "right"; hidden: boolean; onClick: () => void }) {
+  if (hidden) return null;
+  return (
+    <button
+      type="button"
+      aria-label={side === "left" ? "Предыдущее фото" : "Следующее фото"}
+      className={`absolute top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-navy shadow ${side === "left" ? "left-3" : "right-3"}`}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
+    >
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+        {side === "left" ? <path d="M14 6 8 12l6 6" /> : <path d="M10 6l6 6-6 6" />}
+      </svg>
+    </button>
+  );
 }
 
 function Zone({

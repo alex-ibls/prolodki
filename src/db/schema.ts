@@ -135,6 +135,8 @@ export const attributeDefs = pgTable("attribute_defs", {
   name: text("name").notNull(),
   unit: text("unit").notNull().default(""),
   filterable: boolean("filterable").notNull().default(true),
+  featured: boolean("featured").notNull().default(false),
+  icon: text("icon").notNull().default(""),
   cardOrder: integer("card_order").notNull().default(0),
   dataType: text("data_type").notNull().default("number"),
 });

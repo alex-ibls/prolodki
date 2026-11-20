@@ -290,6 +290,29 @@ export async function getPublishedListing(slug: string) {
   });
 }
 
+export async function publishedListingByPath(slug: string) {
+  await ensureSafeListingSlugs();
+  const exact = await getPublishedListing(slug);
+  if (exact) return exact;
+  const token = slug.match(/-([0-9a-f]{8,32})$/i)?.[1]?.toLowerCase();
+  if (!token) return null;
+  const rows = await db
+    .select({ slug: listings.slug })
+    .from(listings)
+    .where(
+      and(
+        eq(listings.status, "published"),
+        sql`(
+          replace(${listings.id}::text, '-', '') like ${`${token}%`}
+          or replace(coalesce(${listings.nomenclatureId}::text, ''), '-', '') like ${`${token}%`}
+        )`,
+      ),
+    )
+    .limit(2);
+  if (rows.length !== 1) return null;
+  return getPublishedListing(rows[0].slug);
+}
+
 export async function suggestBrands(term: string) {
   return db
     .select({ brand: brands.name })

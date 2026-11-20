@@ -5,22 +5,22 @@ import { effectiveCharacteristics } from "../lib/characteristics";
 import { slugify } from "../lib/slug";
 
 const boatDefs = [
-  { code: "length_m", name: "Длина", unit: "м", cardOrder: 1 },
-  { code: "width_m", name: "Ширина", unit: "м", cardOrder: 2 },
-  { code: "seats", name: "Мест", unit: "", cardOrder: 3 },
-  { code: "max_hp", name: "Мощность", unit: "л.с.", cardOrder: 4 },
-  { code: "weight_kg", name: "Вес", unit: "кг", cardOrder: 5 },
-  { code: "side_height_mm", name: "Высота борта", unit: "мм", cardOrder: 6 },
-  { code: "material", name: "Материал корпуса", unit: "", cardOrder: 7, filterable: false, dataType: "text" },
-  { code: "bottom_material", name: "Материал дна", unit: "", cardOrder: 8, filterable: false, dataType: "text" },
-  { code: "deadrise_mid", name: "Килеватость на миделе", unit: "°", cardOrder: 9 },
-  { code: "deadrise_transom", name: "Килеватость на транце", unit: "°", cardOrder: 10 },
-  { code: "transom_height_mm", name: "Высота транца", unit: "мм", cardOrder: 11 },
-  { code: "bottom_mm", name: "Толщина днища", unit: "мм", cardOrder: 12 },
-  { code: "side_thickness_mm", name: "Толщина борта", unit: "мм", cardOrder: 13 },
-  { code: "transom_thickness_mm", name: "Толщина транца", unit: "мм", cardOrder: 14 },
-  { code: "capacity_kg", name: "Грузоподъёмность", unit: "кг", cardOrder: 15 },
-  { code: "passengers", name: "Вместимость", unit: "чел.", cardOrder: 16 },
+  { code: "length_m", name: "Длина", unit: "м", cardOrder: 1, featured: true, icon: "length" },
+  { code: "width_m", name: "Ширина", unit: "м", cardOrder: 2, featured: true, icon: "width" },
+  { code: "seats", name: "Мест", unit: "", cardOrder: 3, featured: true, icon: "people" },
+  { code: "max_hp", name: "Мощность", unit: "л.с.", cardOrder: 4, featured: true, icon: "power" },
+  { code: "weight_kg", name: "Вес", unit: "кг", cardOrder: 5, icon: "weight" },
+  { code: "side_height_mm", name: "Высота борта", unit: "мм", cardOrder: 6, icon: "height" },
+  { code: "material", name: "Материал корпуса", unit: "", cardOrder: 7, filterable: false, dataType: "text", icon: "layers" },
+  { code: "bottom_material", name: "Материал дна", unit: "", cardOrder: 8, filterable: false, dataType: "text", icon: "layers" },
+  { code: "deadrise_mid", name: "Килеватость на миделе", unit: "°", cardOrder: 9, icon: "angle" },
+  { code: "deadrise_transom", name: "Килеватость на транце", unit: "°", cardOrder: 10, icon: "angle" },
+  { code: "transom_height_mm", name: "Высота транца", unit: "мм", cardOrder: 11, icon: "height" },
+  { code: "bottom_mm", name: "Толщина днища", unit: "мм", cardOrder: 12, icon: "layers" },
+  { code: "side_thickness_mm", name: "Толщина борта", unit: "мм", cardOrder: 13, icon: "layers" },
+  { code: "transom_thickness_mm", name: "Толщина транца", unit: "мм", cardOrder: 14, icon: "layers" },
+  { code: "capacity_kg", name: "Грузоподъёмность", unit: "кг", cardOrder: 15, icon: "cargo" },
+  { code: "passengers", name: "Вместимость", unit: "чел.", cardOrder: 16, featured: true, icon: "people" },
 ];
 
 type Node = { slug: string; name: string; sort: number; children?: Node[] };
@@ -158,6 +158,8 @@ async function retargetListing(listingId: string, categoryId: number) {
       unit: attributeDefs.unit,
       cardOrder: attributeDefs.cardOrder,
       filterable: attributeDefs.filterable,
+      featured: attributeDefs.featured,
+      icon: attributeDefs.icon,
       dataType: attributeDefs.dataType,
     })
     .from(listingAttributes)
@@ -176,6 +178,8 @@ async function retargetListing(listingId: string, categoryId: number) {
           unit: attr.unit,
           cardOrder: attr.cardOrder,
           filterable: attr.filterable,
+          featured: attr.featured,
+          icon: attr.icon,
           dataType: attr.dataType,
         })
         .returning();
@@ -201,6 +205,8 @@ async function retargetNomenclature(nomenclatureId: string, categoryId: number) 
       unit: attributeDefs.unit,
       cardOrder: attributeDefs.cardOrder,
       filterable: attributeDefs.filterable,
+      featured: attributeDefs.featured,
+      icon: attributeDefs.icon,
       dataType: attributeDefs.dataType,
     })
     .from(nomenclatureAttributes)
@@ -219,6 +225,8 @@ async function retargetNomenclature(nomenclatureId: string, categoryId: number) 
           unit: attr.unit,
           cardOrder: attr.cardOrder,
           filterable: attr.filterable,
+          featured: attr.featured,
+          icon: attr.icon,
           dataType: attr.dataType,
         })
         .returning();

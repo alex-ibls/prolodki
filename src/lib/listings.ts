@@ -11,7 +11,7 @@ import { parseIntStrict, parsePriceToKopeks, parseRublesToKopeks, rubleIssue, pa
 import { buyerListingsEnabled, ensureIndividualSeller } from "@/lib/seller";
 import type { CurrentUser } from "@/lib/session";
 import { readCityPlace } from "@/lib/ru-cities";
-import { slugify } from "@/lib/slug";
+import { listingSlugFor } from "@/lib/stock";
 import { effectiveCharacteristics } from "@/lib/characteristics";
 import { assertLeafCategory, ensureBrandName } from "@/lib/taxonomy";
 import { releaseStoredPhoto } from "@/lib/photos";
@@ -136,18 +136,12 @@ export async function saveSellerListing(user: CurrentUser, listingId: string | n
     updatedAt: new Date(),
   };
 
-  let id = existing?.id;
+  let id = existing?.id ?? crypto.randomUUID();
+  const slug = await listingSlugFor(db, title, id, existing?.id);
   if (!existing) {
-    const [created] = await db
-      .insert(listings)
-      .values({
-        ...values,
-        slug: `${slugify(title)}-${crypto.randomUUID().slice(0, 8)}`,
-      })
-      .returning();
-    id = created.id;
+    await db.insert(listings).values({ ...values, id, slug });
   } else {
-    await db.update(listings).set(values).where(eq(listings.id, existing.id));
+    await db.update(listings).set({ ...values, slug }).where(eq(listings.id, id));
   }
 
   await db.delete(listingAttributes).where(eq(listingAttributes.listingId, id!));

@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { CrumbTitle } from "@/components/breadcrumbs";
 import { ProductGallery } from "@/components/product-gallery";
 import { YandexPlaceMap } from "@/components/yandex-place-map";
@@ -7,7 +7,7 @@ import { TrackView } from "@/components/track-view";
 import { KitProvider, ProductCost, ProductGroups, productSectionClass } from "@/components/product-kit";
 import { pageFrame } from "@/components/styles";
 import { isFavorite } from "@/lib/activity";
-import { getPublishedListing } from "@/lib/catalog";
+import { publishedListingByPath } from "@/lib/catalog";
 import { deliveryTerm, formatRub } from "@/lib/format";
 import { readQuery } from "@/lib/query";
 import { cartOptionsForListing } from "@/lib/cart";
@@ -23,8 +23,9 @@ export default async function ProductPage({
 }) {
   const { slug } = await params;
   const { one } = await readQuery(searchParams);
-  const item = await getPublishedListing(slug);
+  const item = await publishedListingByPath(slug);
   if (!item) notFound();
+  if (item.slug !== slug) redirect(`/product/${item.slug}`);
   const saved = await isFavorite(item.id);
   const highlights = highlightSpecs(item);
   const kit = item.source === "company" && item.nomenclatureId ? await kitForNomenclature(item.nomenclatureId) : [];
@@ -45,6 +46,7 @@ export default async function ProductPage({
     ...specsOf(item).map((spec) => ({
       key: spec.definition.code,
       code: spec.definition.code,
+      icon: spec.definition.icon,
       label: spec.definition.name,
       value: specValue(spec),
     })),

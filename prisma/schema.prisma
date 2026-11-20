@@ -11,6 +11,8 @@ model attribute_defs {
   name                    String
   unit                    String                    @default("")
   filterable              Boolean                   @default(true)
+  featured                Boolean                   @default(false)
+  icon                    String                    @default("")
   card_order              Int                       @default(0)
   data_type               String                    @default("number")
   categories              categories                @relation(fields: [category_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "attribute_defs_category_id_categories_id_fk")
