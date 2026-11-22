@@ -77,7 +77,7 @@ export default async function NomenclaturePage({
                   value: "purge",
                   label: "Удалить",
                   confirmTitle: "Удалить выбранные карточки?",
-                  confirm: "Карточки исчезнут из списков. Запись в базе сохранится.",
+                  confirm: "Карточки исчезнут из списков.",
                 },
               ]
             : [
@@ -92,6 +92,12 @@ export default async function NomenclaturePage({
               ]
         }
         bulkAction={bulkNomenclatureAction}
+        rowDelete={{
+          value: "remove",
+          label: "Удалить",
+          confirmTitle: "Удалить карточку?",
+          confirm: "Карточка исчезнет из списков.",
+        }}
         q={list.q}
         sort={list.sort}
         dir={list.dir}

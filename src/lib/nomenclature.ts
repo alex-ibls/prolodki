@@ -279,7 +279,7 @@ export async function restoreNomenclature(ids: string[]) {
   await syncCards(rows.map((row) => row.id));
 }
 
-export async function purgeNomenclature(ids: string[]) {
+async function rowsForDelete(ids: string[]) {
   const rows = await db
     .select({
       id: nomenclature.id,
@@ -291,9 +291,25 @@ export async function purgeNomenclature(ids: string[]) {
     .from(nomenclature)
     .where(inArray(nomenclature.id, ids));
   if (rows.length === 0) throw new DomainError("Карточки не найдены");
-  if (rows.some((row) => !row.archivedAt || row.deletedAt)) throw new DomainError("Удалить можно только из архива");
   const reserved = rows.filter((row) => row.quantityReserved > 0).map((row) => row.sku);
   if (reserved.length > 0) throw new DomainError(`В резерве: ${reserved.join(", ")}`);
+  return rows;
+}
+
+export async function deleteNomenclature(ids: string[]) {
+  const rows = await rowsForDelete(ids);
+  if (rows.some((row) => row.deletedAt)) throw new DomainError("Карточка уже удалена");
+  const hidden = await db
+    .update(nomenclature)
+    .set({ deletedAt: new Date(), updatedAt: new Date() })
+    .where(and(inArray(nomenclature.id, ids), isNull(nomenclature.deletedAt)))
+    .returning({ id: nomenclature.id });
+  await syncCards(hidden.map((row) => row.id));
+}
+
+export async function purgeNomenclature(ids: string[]) {
+  const rows = await rowsForDelete(ids);
+  if (rows.some((row) => !row.archivedAt || row.deletedAt)) throw new DomainError("Удалить можно только из архива");
 
   const hidden = await db
     .update(nomenclature)

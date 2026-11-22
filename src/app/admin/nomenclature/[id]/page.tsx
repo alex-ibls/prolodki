@@ -53,7 +53,7 @@ export default async function NomenclatureItemPage({
         ) : null}
       </div>
       {item.deletedAt ? (
-        <p className="rounded-md bg-foam px-4 py-3 text-sm text-deep">Карточка удалена. В списках её нет, запись в базе сохранена.</p>
+        <p className="rounded-md bg-foam px-4 py-3 text-sm text-deep">Карточка удалена. В списках её нет.</p>
       ) : item.archivedAt ? (
         <p className="rounded-md bg-foam px-4 py-3 text-sm text-deep">Карточка в архиве. На витрине она не показывается, пока её не вернуть в активный список.</p>
       ) : null}

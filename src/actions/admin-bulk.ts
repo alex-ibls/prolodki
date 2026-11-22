@@ -10,7 +10,7 @@ import { DomainError } from "@/lib/errors";
 import { runAction } from "@/lib/guards";
 import { transitionLine } from "@/lib/orders";
 import { companyOrg, syncPublishedListing } from "@/lib/stock";
-import { archiveNomenclature, purgeNomenclature, restoreNomenclature } from "@/lib/nomenclature";
+import { archiveNomenclature, deleteNomenclature, purgeNomenclature, restoreNomenclature } from "@/lib/nomenclature";
 import { categoryChain } from "@/lib/taxonomy";
 
 const dealStatuses = ["new", "in_progress", "invoiced", "won", "lost"] as const;
@@ -113,6 +113,8 @@ export async function bulkNomenclatureAction(formData: FormData) {
       await restoreNomenclature(ids);
     } else if (op === "purge") {
       await purgeNomenclature(ids);
+    } else if (op === "remove") {
+      await deleteNomenclature(ids);
     } else if (op === "publish" || op === "unpublish") {
       await db
         .update(nomenclature)

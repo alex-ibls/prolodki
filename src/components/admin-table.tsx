@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { flushSync } from "react-dom";
+import { TrashIcon } from "@/components/action-icons";
 import { adminHref, type AdminBulkOption, type AdminColumn, type AdminFilter, type AdminRow } from "@/lib/admin-list";
 import { buttonClass, secondaryClass } from "@/components/styles";
 
@@ -25,6 +27,7 @@ export function AdminTable({
   saved,
   toolbar,
   footer,
+  rowDelete,
 }: {
   title: string;
   basePath: string;
@@ -45,11 +48,13 @@ export function AdminTable({
   saved?: string;
   toolbar?: ReactNode;
   footer?: ReactNode;
+  rowDelete?: AdminBulkOption;
 }) {
   const token = rows.map((row) => row.id).join("|");
   const [seen, setSeen] = useState(token);
   const [picked, setPicked] = useState<string[]>([]);
-  const [ask, setAsk] = useState<AdminBulkOption | null>(null);
+  const [ask, setAsk] = useState<(AdminBulkOption & { rowId?: string }) | null>(null);
+  const [rowOp, setRowOp] = useState("");
   const bulkForm = useRef<HTMLFormElement>(null);
   const skipConfirm = useRef(false);
   const [op, setOp] = useState(bulk[0]?.value ?? "");
@@ -98,14 +103,14 @@ export function AdminTable({
       <form method="get" action={basePath} className="flex flex-wrap items-end gap-2">
         <input type="hidden" name="sort" value={sort} />
         <input type="hidden" name="dir" value={dir} />
-        <label className="min-w-0 flex-1 text-sm">
+        <label className="w-full min-w-52 flex-1 basis-64 text-sm sm:w-auto">
           Поиск
-          <input name="q" defaultValue={q} className="field search mt-1 w-full min-w-40 border border-line bg-white px-4 py-2 text-sm outline-none focus:border-navy" />
+          <input name="q" defaultValue={q} className="field search mt-1 w-full border border-line bg-white px-4 py-2 text-sm outline-none focus:border-navy" />
         </label>
         {filters.map((filter) => (
-          <label key={filter.key} className="text-sm">
+          <label key={filter.key} className="w-44 min-w-0 max-w-full shrink-0 text-sm">
             {filter.label}
-            <select name={filter.key} defaultValue={filter.value} className="field mt-1 w-full border border-line bg-white px-3 py-2 text-sm outline-none focus:border-navy">
+            <select name={filter.key} defaultValue={filter.value} className="field mt-1 w-full min-w-0 border border-line bg-white px-3 py-2 text-sm outline-none focus:border-navy">
               {filter.options.map((option) => (
                 <option key={option.value || "all"} value={option.value}>
                   {option.label}
@@ -114,13 +119,14 @@ export function AdminTable({
             </select>
           </label>
         ))}
-        <button className={buttonClass}>Найти</button>
-        <Link href={basePath} className={secondaryClass}>
+        <button className={`${buttonClass} shrink-0`}>Найти</button>
+        <Link href={basePath} className={`${secondaryClass} shrink-0`}>
           Сбросить
         </Link>
       </form>
       <form ref={bulkForm} action={bulkAction} className="grid gap-3">
         <input type="hidden" name="back" value={back} />
+        {rowOp ? <input type="hidden" name="op" value={rowOp} /> : null}
         <div className="overflow-x-auto rounded-2xl border border-line bg-card">
           <table className="w-full min-w-[720px] border-collapse text-left text-sm">
             <thead className="bg-foam text-muted">
@@ -152,8 +158,8 @@ export function AdminTable({
                     )}
                   </th>
                 ))}
-                <th className="w-10 px-2 py-3">
-                  <span className="sr-only">Просмотр</span>
+                <th className={rowDelete ? "w-20 px-2 py-3" : "w-10 px-2 py-3"}>
+                  <span className="sr-only">Действия</span>
                 </th>
               </tr>
             </thead>
@@ -182,14 +188,27 @@ export function AdminTable({
                     </td>
                   ))}
                   <td className="px-2 py-3">
-                    <Link
-                      href={row.href}
-                      title="Подробнее"
-                      aria-label={`Подробнее: ${row.cells[columns[0]?.key ?? ""] || row.id}`}
-                      className="flex h-8 w-8 items-center justify-center text-navy"
-                    >
-                      <EyeIcon />
-                    </Link>
+                    <span className="flex items-center justify-end">
+                      {rowDelete ? (
+                        <button
+                          type="button"
+                          title={rowDelete.label}
+                          aria-label={`${rowDelete.label}: ${row.cells[columns[0]?.key ?? ""] || row.id}`}
+                          className="flex h-8 w-8 items-center justify-center text-muted hover:text-deep"
+                          onClick={() => setAsk({ ...rowDelete, rowId: row.id })}
+                        >
+                          <TrashIcon />
+                        </button>
+                      ) : null}
+                      <Link
+                        href={row.href}
+                        title="Подробнее"
+                        aria-label={`Подробнее: ${row.cells[columns[0]?.key ?? ""] || row.id}`}
+                        className="flex h-8 w-8 items-center justify-center text-navy"
+                      >
+                        <EyeIcon />
+                      </Link>
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -200,7 +219,7 @@ export function AdminTable({
         <div className="flex flex-wrap items-end gap-2">
           <label className="text-sm">
             Действие с выбранными
-            <select name="op" value={op} onChange={(event) => setOp(event.target.value)} className="field mt-1 w-full border border-line bg-white px-3 py-2 text-sm outline-none focus:border-navy">
+            <select name={rowOp ? undefined : "op"} value={op} onChange={(event) => setOp(event.target.value)} className="field mt-1 w-full border border-line bg-white px-3 py-2 text-sm outline-none focus:border-navy">
               {bulk.map((item) => (
                 <option key={item.value} value={item.value}>
                   {item.label}
@@ -278,6 +297,17 @@ export function AdminTable({
                 type="button"
                 className={buttonClass}
                 onClick={() => {
+                  const rowId = ask.rowId;
+                  const value = ask.value;
+                  if (rowId) {
+                    flushSync(() => {
+                      setRowOp(value);
+                      setPicked([rowId]);
+                      setAsk(null);
+                    });
+                    bulkForm.current?.requestSubmit();
+                    return;
+                  }
                   skipConfirm.current = true;
                   setAsk(null);
                   bulkForm.current?.requestSubmit();
