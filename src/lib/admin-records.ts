@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, ilike, inArray, or, sql, type SQL, type SQLWrapper } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, isNotNull, isNull, or, sql, type SQL, type SQLWrapper } from "drizzle-orm";
 import { db } from "@/db";
 import { categories, customers, deals, listings, nomenclature, orderItems, orders } from "@/db/schema";
 import {
@@ -245,10 +245,13 @@ export async function listBrands(one: Reader, scope?: Scope): Promise<AdminPage>
 export async function listNomenclature(one: Reader, scope?: Scope): Promise<AdminPage> {
   const state = readList(one, ["sku", "title", "price", "stock", "available", "created"], "created", "desc");
   const published = one("published");
+  const archive = one("archive");
   const category = one("category");
   const categoryId = Number(category);
   const pattern = state.q ? likePattern(state.q) : "";
   const where = whereAnd(
+    isNull(nomenclature.deletedAt),
+    archive === "yes" ? isNotNull(nomenclature.archivedAt) : isNull(nomenclature.archivedAt),
     published === "yes" ? eq(nomenclature.isPublished, true) : published === "no" ? eq(nomenclature.isPublished, false) : undefined,
     Number.isInteger(categoryId) && categoryId > 0 ? eq(nomenclature.categoryId, categoryId) : undefined,
     pattern ? or(ilike(nomenclature.sku, pattern), ilike(nomenclature.title, pattern), ilike(nomenclature.brand, pattern)) : undefined,
@@ -270,7 +273,7 @@ export async function listNomenclature(one: Reader, scope?: Scope): Promise<Admi
   return finish(
     state,
     scope,
-    { published, category },
+    { published, category, archive },
     async () => {
       const [row] = await db.select({ n: count() }).from(nomenclature).where(where);
       return row?.n ?? 0;

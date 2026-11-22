@@ -151,8 +151,7 @@ async function recoverCreatedId(formData: FormData, message: string) {
   const sku = String(formData.get("sku") || "").trim().toUpperCase();
   if (!sku) return null;
   const row = await db.query.nomenclature.findFirst({ where: eq(nomenclature.sku, sku) });
-  if (!row) return null;
-  if (message === "Такой артикул уже есть") return row.id;
+  if (!row || message === "Такой артикул уже есть") return null;
   if (Date.now() - row.createdAt.getTime() < 2 * 60 * 1000) return row.id;
   return null;
 }
@@ -203,20 +202,12 @@ export async function saveNomenclatureAction(
       .where(eq(listings.nomenclatureId, id))
       .limit(1);
     if (listing && !listing.slug.includes("/")) revalidatePath(`/product/${listing.slug}`);
-    return { id, href: `/admin/nomenclature/${id}?saved=1`, error: null, nonce: crypto.randomUUID() };
+    return { id, href: "/admin/nomenclature?saved=card", error: null, nonce: crypto.randomUUID() };
   } catch (error) {
     if (isNextNavigation(error)) throw error;
     const message = error instanceof DomainError ? error.message : "Не получилось сохранить карточку";
     const target = id ?? (await recoverCreatedId(formData, message));
-    if (target) {
-      return {
-        id: target,
-        href: `/admin/nomenclature/${target}?error=${encodeURIComponent(message)}`,
-        error: message,
-        nonce: crypto.randomUUID(),
-      };
-    }
-    return { id: null, href: null, error: message, nonce: crypto.randomUUID() };
+    return { id: target, href: null, error: message, nonce: crypto.randomUUID() };
   }
 }
 

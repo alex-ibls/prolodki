@@ -27,9 +27,24 @@ export function NameSuggest({
 }) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
+  const [touched, setTouched] = useState(false);
   const box = useRef<HTMLLabelElement>(null);
+  const issue =
+    name === "brand"
+      ? value.trim().length > 0 && value.trim().length < 2
+        ? "Не короче 2 символов"
+        : value.trim().length > 80
+          ? "Не больше 80 символов"
+          : ""
+      : value.trim().length > textInputLimit
+        ? `Не больше ${textInputLimit} символов`
+        : "";
   const rows = useMemo(() => suggestRows(value, options, minLength), [minLength, options, value]);
   const highlighted = rows.length ? Math.min(active, rows.length - 1) : 0;
+
+  useEffect(() => {
+    box.current?.querySelector("input")?.setCustomValidity(issue);
+  }, [issue]);
 
   useEffect(() => {
     function onPointer(event: PointerEvent) {
@@ -58,10 +73,12 @@ export function NameSuggest({
         aria-expanded={open}
         aria-autocomplete="list"
         placeholder={placeholder}
-        className={inputClass}
+        className={`${inputClass} ${touched && issue ? "border-red-400 focus:border-red-500" : ""}`}
         onFocus={() => {
           if (!disabled) setOpen(true);
         }}
+        onBlur={() => setTouched(true)}
+        onInvalid={() => setTouched(true)}
         onChange={(event) => {
           onValue(event.target.value);
           setActive(0);
@@ -83,6 +100,7 @@ export function NameSuggest({
           }
         }}
       />
+      {touched && issue ? <span className="mt-1 block text-xs text-red-700">{issue}</span> : null}
       {open && rows.length > 0 && !disabled ? (
         <ul role="listbox" className="absolute left-0 right-0 top-full z-30 mt-1 max-h-60 overflow-auto rounded-2xl border border-line bg-white py-1 shadow">
           {rows.map((row, index) => (

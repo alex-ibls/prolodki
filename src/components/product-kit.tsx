@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import { addToCartAction, saveConfigurationAction } from "@/actions/store";
 import { TrashIcon } from "@/components/action-icons";
 import { FavoriteButton, ShareButton } from "@/components/product-actions";
+import { PhotoFrame } from "@/components/photo-frame";
 import { actionClass } from "@/components/styles";
 import { formatRub } from "@/lib/format";
 import type { KitGroup } from "@/lib/kit";
@@ -279,12 +280,7 @@ export function ProductGroups() {
                         onClick={() => kit.toggle(group, item.id)}
                         className={`overflow-hidden border bg-white text-left ${on ? "border-navy ring-1 ring-navy" : "border-line"}`}
                       >
-                        {item.imagePath ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={`/media/${item.imagePath}`} alt="" className="block aspect-[4/3] w-full bg-foam object-contain" />
-                        ) : (
-                          <span className="flex aspect-[4/3] items-end bg-foam p-1 text-[10px] leading-3 text-muted">{item.name}</span>
-                        )}
+                        <PhotoFrame path={item.imagePath} className="block aspect-[4/3] w-full object-contain" />
                         <span className="block px-1.5 py-1">
                           <span className="block text-xs font-semibold leading-4 text-deep">{item.name}</span>
                           <span className="mt-0.5 block text-[11px] text-muted">

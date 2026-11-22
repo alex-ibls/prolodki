@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { toggleFavoriteAction } from "@/actions/activity";
+import { PhotoFrame } from "@/components/photo-frame";
 import { pageFrame, secondaryClass } from "@/components/styles";
 import { favoriteListings } from "@/lib/activity";
 import { formatOffer } from "@/lib/format";
@@ -21,12 +22,7 @@ export default async function FavoritesPage() {
           return (
             <li key={item.id} className="flex items-center gap-3">
               <Link href={`/product/${item.slug}`} className="flex min-w-0 flex-1 items-center gap-3">
-                {photo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={`/media/${photo}`} alt="" className="h-16 w-16 shrink-0 rounded-md object-cover" />
-                ) : (
-                  <span className="h-16 w-16 shrink-0 rounded-md bg-foam" />
-                )}
+                <PhotoFrame path={photo} className="h-16 w-16 shrink-0 rounded-md object-cover" />
                 <span className="min-w-0">
                   <span className="block text-[15px] font-bold leading-5 text-deep">{formatOffer(item.priceKopeks)}</span>
                   <span className="mt-0.5 line-clamp-2 text-[13px] leading-4 text-deep">{item.title}</span>

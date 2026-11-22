@@ -1,0 +1,1 @@
+ALTER TABLE "nomenclature" ADD COLUMN IF NOT EXISTS "archived_at" TIMESTAMPTZ(6);

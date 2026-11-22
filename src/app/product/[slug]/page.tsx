@@ -8,7 +8,7 @@ import { KitProvider, ProductCost, ProductGroups, productSectionClass } from "@/
 import { pageFrame } from "@/components/styles";
 import { isFavorite } from "@/lib/activity";
 import { publishedListingByPath } from "@/lib/catalog";
-import { deliveryTerm, formatRub } from "@/lib/format";
+import { deliveryTerm, formatLogistics } from "@/lib/format";
 import { readQuery } from "@/lib/query";
 import { cartOptionsForListing } from "@/lib/cart";
 import { kitForNomenclature } from "@/lib/kit";
@@ -29,7 +29,7 @@ export default async function ProductPage({
   const saved = await isFavorite(item.id);
   const highlights = highlightSpecs(item);
   const kit = item.source === "company" && item.nomenclatureId ? await kitForNomenclature(item.nomenclatureId) : [];
-  const logistics = item.logisticsKopeks && item.logisticsKopeks > 0 ? formatRub(item.logisticsKopeks) : "по запросу";
+  const logistics = formatLogistics(item.logisticsKopeks);
   const leadTime = deliveryTerm(item.quantity);
   const specs = [
     item.brand

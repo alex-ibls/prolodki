@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
-import { useActionState } from "react";
+import { startTransition, useActionState, useEffect, useRef, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { saveNomenclatureAction } from "@/actions/admin";
 import { buttonClass } from "@/components/styles";
@@ -46,18 +45,33 @@ export function NomenclatureFormShell({
       ? "Карточка добавлена."
       : "";
 
+  function revealInvalid(form: HTMLFormElement) {
+    let first: HTMLElement | null = null;
+    for (const field of form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>("input, textarea, select")) {
+      if (field.disabled || field.type === "hidden" || field.checkValidity()) continue;
+      field.dispatchEvent(new Event("invalid", { cancelable: true }));
+      first ??= field;
+    }
+    first?.focus();
+  }
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    if (lock.current) return;
+    if (!form.checkValidity()) {
+      revealInvalid(form);
+      return;
+    }
+    lock.current = true;
+    const data = new FormData(form);
+    startTransition(() => {
+      action(data);
+    });
+  }
+
   return (
-    <form
-      action={action}
-      className="grid gap-3 rounded-3xl border border-line bg-card p-4"
-      onSubmit={(event) => {
-        if (lock.current) {
-          event.preventDefault();
-          return;
-        }
-        lock.current = true;
-      }}
-    >
+    <form className="grid gap-3 rounded-3xl border border-line bg-card p-4" onSubmit={submit}>
       {id ? <input type="hidden" name="id" value={id} /> : null}
       {status ? (
         <p className="save-banner flex items-center gap-2 rounded-md bg-foam px-4 py-3 text-sm text-deep" role="status">
@@ -76,7 +90,12 @@ export function NomenclatureFormShell({
         </p>
       ) : null}
       {children}
-      <button type="submit" className={`${buttonClass} gap-2`} disabled={pending} aria-busy={pending}>
+      <button
+        type="submit"
+        className={`${buttonClass} gap-2`}
+        disabled={pending}
+        aria-busy={pending}
+      >
         {pending ? <Spinner /> : null}
         {pending ? (creating ? "Добавляем…" : "Сохраняем…") : creating ? "Добавить" : "Сохранить"}
       </button>

@@ -66,6 +66,10 @@ div.field {
   border-radius: 6px;
 }
 
+html {
+  color-scheme: light;
+}
+
 body {
   background: var(--paper);
   color: var(--ink);

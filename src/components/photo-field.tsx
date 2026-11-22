@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { PhotoFrame } from "@/components/photo-frame";
 import { buttonClass, secondaryClass } from "@/components/styles";
 
 const maxPhotos = 10;
@@ -76,8 +77,7 @@ export function PhotoField({
       <div className="mt-1 flex flex-wrap gap-2">
         {kept.map((image) => (
           <div key={image.id} className="relative h-20 w-20">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`/media/${image.path}`} alt="" className="h-20 w-20 rounded-xl object-cover" />
+            <PhotoFrame path={image.path} className="h-20 w-20 rounded-xl object-cover" />
             {disabled ? null : (
               <button
                 type="button"
@@ -92,8 +92,7 @@ export function PhotoField({
         ))}
         {picked.map((image, index) => (
           <div key={image.key} className="relative h-20 w-20">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={image.src} alt="" className="h-20 w-20 rounded-xl object-cover" />
+            <PhotoFrame path={image.src} className="h-20 w-20 rounded-xl object-cover" />
             <button
               type="button"
               aria-label="Убрать выбранное фото"

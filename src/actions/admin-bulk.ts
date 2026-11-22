@@ -10,6 +10,7 @@ import { DomainError } from "@/lib/errors";
 import { runAction } from "@/lib/guards";
 import { transitionLine } from "@/lib/orders";
 import { companyOrg, syncPublishedListing } from "@/lib/stock";
+import { archiveNomenclature, purgeNomenclature, restoreNomenclature } from "@/lib/nomenclature";
 import { categoryChain } from "@/lib/taxonomy";
 
 const dealStatuses = ["new", "in_progress", "invoiced", "won", "lost"] as const;
@@ -105,13 +106,22 @@ export async function bulkNomenclatureAction(formData: FormData) {
   await runAction(back, async (user) => {
     if (user.staffRole !== "manager") throw new DomainError("Номенклатура доступна менеджеру");
     const op = String(formData.get("op") || "");
-    if (op !== "publish" && op !== "unpublish") throw new DomainError("Неизвестное действие");
     const ids = readIds(formData);
-    await db
-      .update(nomenclature)
-      .set({ isPublished: op === "publish", updatedAt: new Date() })
-      .where(inArray(nomenclature.id, ids));
-    for (const id of ids) await syncPublishedListing(db, id);
+    if (op === "archive") {
+      await archiveNomenclature(ids);
+    } else if (op === "restore") {
+      await restoreNomenclature(ids);
+    } else if (op === "purge") {
+      await purgeNomenclature(ids);
+    } else if (op === "publish" || op === "unpublish") {
+      await db
+        .update(nomenclature)
+        .set({ isPublished: op === "publish", updatedAt: new Date() })
+        .where(inArray(nomenclature.id, ids));
+      for (const id of ids) await syncPublishedListing(db, id);
+    } else {
+      throw new DomainError("Неизвестное действие");
+    }
     redirect(withSaved(back));
   });
 }

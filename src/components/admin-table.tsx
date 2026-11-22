@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { adminHref, type AdminBulkOption, type AdminColumn, type AdminFilter, type AdminRow } from "@/lib/admin-list";
 import { buttonClass, secondaryClass } from "@/components/styles";
 
@@ -49,6 +49,9 @@ export function AdminTable({
   const token = rows.map((row) => row.id).join("|");
   const [seen, setSeen] = useState(token);
   const [picked, setPicked] = useState<string[]>([]);
+  const [ask, setAsk] = useState<AdminBulkOption | null>(null);
+  const bulkForm = useRef<HTMLFormElement>(null);
+  const skipConfirm = useRef(false);
   const [op, setOp] = useState(bulk[0]?.value ?? "");
   if (token !== seen) {
     setSeen(token);
@@ -74,6 +77,15 @@ export function AdminTable({
   function toggle(id: string) {
     setPicked((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
   }
+
+  useEffect(() => {
+    if (!ask) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setAsk(null);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [ask]);
 
   return (
     <div className="grid gap-4">
@@ -107,7 +119,7 @@ export function AdminTable({
           Сбросить
         </Link>
       </form>
-      <form action={bulkAction} className="grid gap-3">
+      <form ref={bulkForm} action={bulkAction} className="grid gap-3">
         <input type="hidden" name="back" value={back} />
         <div className="overflow-x-auto rounded-2xl border border-line bg-card">
           <table className="w-full min-w-[720px] border-collapse text-left text-sm">
@@ -202,7 +214,20 @@ export function AdminTable({
               <input name="reason" required className="field mt-1 w-full border border-line bg-white px-3 py-2 text-sm outline-none focus:border-navy" />
             </label>
           ) : null}
-          <button className={buttonClass} disabled={picked.length === 0}>
+          <button
+            className={buttonClass}
+            disabled={picked.length === 0}
+            onClick={(event) => {
+              if (skipConfirm.current) {
+                skipConfirm.current = false;
+                return;
+              }
+              const option = bulk.find((item) => item.value === op);
+              if (!option?.confirm) return;
+              event.preventDefault();
+              setAsk(option);
+            }}
+          >
             Применить
           </button>
           <a href={excel} className={secondaryClass}>
@@ -232,6 +257,38 @@ export function AdminTable({
         ) : null}
       </div>
       {footer}
+      {ask ? (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-deep/40 p-4" onClick={() => setAsk(null)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="bulk-confirm-title"
+            className="w-full max-w-sm rounded-xl border border-line bg-white p-4"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p id="bulk-confirm-title" className="font-semibold text-deep">
+              {ask.confirmTitle || ask.label}
+            </p>
+            {ask.confirm ? <p className="mt-1 text-sm text-muted">{ask.confirm}</p> : null}
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" className={secondaryClass} onClick={() => setAsk(null)}>
+                Отмена
+              </button>
+              <button
+                type="button"
+                className={buttonClass}
+                onClick={() => {
+                  skipConfirm.current = true;
+                  setAsk(null);
+                  bulkForm.current?.requestSubmit();
+                }}
+              >
+                {ask.label}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

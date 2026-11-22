@@ -5,6 +5,7 @@ import { LimitedText } from "@/components/limited-text";
 import { NomenclatureFormShell } from "@/components/nomenclature-form-shell";
 import { PhotoField } from "@/components/photo-field";
 import { inputClass } from "@/components/styles";
+import { CountInput, RubleInput, TextInput, YearInput } from "@/components/validated-inputs";
 import { allCategories } from "@/lib/catalog";
 import { effectiveCharacteristicsFor } from "@/lib/characteristics";
 import { kitForNomenclature, listKitLibrary } from "@/lib/kit";
@@ -60,16 +61,16 @@ export async function NomenclatureForm({ item, error }: { item?: Item; error?: s
       <div className="grid gap-3 md:grid-cols-2">
         <label className="text-sm">
           Артикул
-          <input name="sku" required defaultValue={item?.sku} className={inputClass} />
+          <TextInput name="sku" required defaultValue={item?.sku ?? ""} />
         </label>
         <label className="text-sm">
           Название
-          <input name="title" required defaultValue={item?.title} className={inputClass} />
+          <TextInput name="title" required min={3} defaultValue={item?.title ?? ""} />
         </label>
         <BrandModelFields brands={choices.brands} models={choices.models} brand={item?.brand} model={item?.model} />
         <label className="text-sm">
           Год
-          <input name="year" defaultValue={item?.year ?? ""} className={inputClass} />
+          <YearInput name="year" defaultValue={item?.year == null ? "" : String(item.year)} />
         </label>
         <label className="text-sm">
           Наличие
@@ -80,35 +81,28 @@ export async function NomenclatureForm({ item, error }: { item?: Item; error?: s
         </label>
         <label className="text-sm">
           Цена, ₽
-          <input name="price" required defaultValue={item ? item.priceKopeks / 100 : ""} className={inputClass} />
+          <RubleInput name="price" required defaultValue={item ? String(item.priceKopeks / 100) : ""} />
         </label>
         <label className="text-sm">
           Старая цена, ₽
-          <input name="compareAt" defaultValue={item?.compareAtKopeks ? item.compareAtKopeks / 100 : ""} className={inputClass} />
+          <RubleInput name="compareAt" defaultValue={item?.compareAtKopeks ? String(item.compareAtKopeks / 100) : ""} />
         </label>
         <label className="text-sm">
           Логистика до дилерского центра в Москве, ₽
-          <input
+          <RubleInput
             name="logistics"
-            inputMode="decimal"
+            allowZero
             placeholder="по запросу"
-            defaultValue={item?.logisticsKopeks ? item.logisticsKopeks / 100 : ""}
-            className={inputClass}
+            defaultValue={item?.logisticsKopeks == null ? "" : String(item.logisticsKopeks / 100)}
           />
         </label>
         <label className="text-sm md:col-span-2">
           Срок поставки (ориентировочно)
-          <input
-            name="leadTime"
-            maxLength={80}
-            placeholder="по запросу"
-            defaultValue={item?.leadTime ?? ""}
-            className={inputClass}
-          />
+          <TextInput name="leadTime" limit={80} placeholder="по запросу" defaultValue={item?.leadTime ?? ""} />
         </label>
         <label className="text-sm">
           Остаток на складе
-          <input name="quantity" required defaultValue={item?.quantityOnHand ?? 0} className={inputClass} />
+          <CountInput name="quantity" defaultValue={String(item?.quantityOnHand ?? 0)} />
         </label>
         {item ? <p className="self-end text-sm text-muted">Резерв: {item.quantityReserved}</p> : null}
       </div>

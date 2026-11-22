@@ -45,8 +45,9 @@ export const leadTimeLimit = 80;
 
 export function readLogisticsAndLead(formData: FormData, price: (raw: string) => number | null) {
   const logisticsRaw = String(formData.get("logistics") || "").trim();
-  const parsed = logisticsRaw ? price(logisticsRaw) : null;
-  if (logisticsRaw && (parsed === null || parsed <= 0)) {
+  const normalized = logisticsRaw.replace(/\s/g, "").replace(",", ".");
+  const parsed = !logisticsRaw ? null : normalized === "0" || normalized === "0.0" || normalized === "0.00" ? 0 : price(logisticsRaw);
+  if (logisticsRaw && (parsed === null || parsed < 0)) {
     throw new DomainError("Цена логистики указана неверно");
   }
   const leadTime = String(formData.get("leadTime") || "").trim();

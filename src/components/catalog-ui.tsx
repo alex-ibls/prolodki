@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PhotoFrame } from "@/components/photo-frame";
 import { actionClass } from "@/components/styles";
 import { SpecIcon } from "@/components/spec-icon";
 import { formatOffer, formatPhone, formatRub } from "@/lib/format";
@@ -125,13 +126,7 @@ export function ProductCard({ item }: { item: CardData }) {
     <article className="flex h-full min-w-0 flex-col bg-white">
       <Link href={`/product/${item.slug}`} className="block">
         <span className="relative block overflow-hidden bg-foam">
-          {photo ? (
-            // Local uploads are served by the app route and are not part of the image optimizer.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={`/media/${photo}`} alt="" className="aspect-[4/3] w-full object-cover" />
-          ) : (
-            <span className="flex aspect-[4/3] items-end bg-deep p-3 text-sm font-semibold text-white">{item.category?.name}</span>
-          )}
+          <PhotoFrame path={photo} className="aspect-[4/3] w-full object-cover" />
           <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-3 pb-3 pt-10 text-white">
             <span className="block text-xl font-bold leading-none">{formatOffer(item.priceKopeks)}</span>
             {item.compareAtKopeks && item.compareAtKopeks > item.priceKopeks ? (

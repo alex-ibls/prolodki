@@ -23,6 +23,8 @@ export type AdminBulkOption = {
   value: string;
   label: string;
   needsReason?: boolean;
+  confirm?: string;
+  confirmTitle?: string;
 };
 
 export type AdminRow = {

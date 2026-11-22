@@ -26,6 +26,7 @@ export function CategoryFields({
         Категория
         <select
           name="categoryId"
+          required
           value={current}
           onChange={(event) => setCurrent(event.target.value)}
           className={inputClass}

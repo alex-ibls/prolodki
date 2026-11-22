@@ -222,6 +222,8 @@ model nomenclature {
   on_order                Boolean                   @default(false)
   logistics_kopeks        Int?
   lead_time               String                    @default("")
+  archived_at             DateTime?                 @db.Timestamptz(6)
+  deleted_at              DateTime?                 @db.Timestamptz(6)
   listings                listings?
   brands                  brands?                   @relation(fields: [brand_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "nomenclature_brand_id_brands_id_fk")
   categories              categories                @relation(fields: [category_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "nomenclature_category_id_categories_id_fk")

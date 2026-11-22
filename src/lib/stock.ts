@@ -57,7 +57,7 @@ export async function syncPublishedListing(executor: Executor, nomenclatureId: s
   const existing = await executor.query.listings.findFirst({
     where: eq(listings.nomenclatureId, item.id),
   });
-  if (!item.isPublished) {
+  if (!item.isPublished || item.archivedAt || item.deletedAt) {
     if (existing && existing.status === "published") {
       await executor
         .update(listings)

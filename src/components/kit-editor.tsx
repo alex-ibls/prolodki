@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { PhotoFrame } from "@/components/photo-frame";
 import { inputClass, secondaryClass } from "@/components/styles";
 import { formatRub } from "@/lib/format";
 
@@ -202,14 +203,7 @@ export function KitEditor({
             <div className="grid gap-3 sm:grid-cols-2">
               {group.items.map((item) => (
                 <div key={item.key} className="grid border border-line">
-                  {item.preview || item.imagePath ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={item.preview || `/media/${item.imagePath}`}
-                      alt=""
-                      className="block aspect-[4/3] w-full bg-foam object-contain"
-                    />
-                  ) : null}
+                  <PhotoFrame path={item.preview || item.imagePath} className="block aspect-[4/3] w-full object-contain" />
                   <div className="grid gap-2 p-3">
                   <label className="text-sm">
                     Название

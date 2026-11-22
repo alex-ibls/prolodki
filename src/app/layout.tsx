@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter_Tight } from "next/font/google";
 import { BreadcrumbBar, CrumbProvider } from "@/components/breadcrumbs";
 import { SiteFooter, SiteHeaderSlot } from "@/components/shell";
@@ -7,6 +7,11 @@ import { site } from "@/lib/site";
 import "./globals.css";
 
 const sans = Inter_Tight({ subsets: ["cyrillic", "latin"], variable: "--font-inter" });
+
+export const viewport: Viewport = {
+  colorScheme: "light",
+  themeColor: "#ebf1f5",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
@@ -17,7 +22,7 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const names = Object.fromEntries((await allCategories()).map((item) => [item.slug, item.name]));
   return (
-    <html lang="ru" className={`${sans.variable} h-full`}>
+    <html lang="ru" className={`${sans.variable} h-full`} style={{ colorScheme: "light" }}>
       <body className="flex min-h-full flex-col bg-paper antialiased">
         <CrumbProvider>
           <SiteHeaderSlot />

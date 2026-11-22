@@ -157,6 +157,8 @@ export const nomenclature = pgTable("nomenclature", {
   compareAtKopeks: integer("compare_at_kopeks"),
   logisticsKopeks: integer("logistics_kopeks"),
   leadTime: text("lead_time").notNull().default(""),
+  archivedAt: timestamp("archived_at", { withTimezone: true }),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
   quantityOnHand: integer("quantity_on_hand").notNull().default(0),
   quantityReserved: integer("quantity_reserved").notNull().default(0),
   city: text("city").notNull().default(""),

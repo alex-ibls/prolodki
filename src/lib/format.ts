@@ -11,6 +11,12 @@ export function formatOffer(kopeks: number) {
   return formatRub(kopeks);
 }
 
+export function formatLogistics(kopeks: number | null | undefined) {
+  if (kopeks == null) return "по запросу";
+  if (kopeks <= 0) return "бесплатно";
+  return formatRub(kopeks);
+}
+
 export function deliveryTerm(quantity: number) {
   return quantity > 0 ? "1 день" : "1 месяц";
 }
@@ -73,10 +79,11 @@ export function textIssue(raw: string, options: { required?: boolean; min?: numb
   return "";
 }
 
-export function rubleIssue(raw: string, required = false) {
+export function rubleIssue(raw: string, required = false, allowZero = false) {
   const cleaned = raw.trim().replace(/\s/g, "");
   if (!cleaned) return required ? "Укажите цену в рублях" : "";
-  if (!/^\d+$/.test(cleaned) || Number(cleaned) <= 0) return "Укажите цену целым числом, без копеек";
+  if (!/^\d+$/.test(cleaned)) return "Укажите цену целым числом, без копеек";
+  if (!allowZero && Number(cleaned) <= 0) return "Укажите цену целым числом, без копеек";
   return "";
 }
 

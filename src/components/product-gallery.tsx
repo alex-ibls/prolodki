@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { PhotoFrame } from "@/components/photo-frame";
 
 export function ProductGallery({
   title,
@@ -110,10 +111,8 @@ export function ProductGallery({
   if (!photo) {
     return (
       <div>
-        <div
-          className={`-mx-3 flex h-56 items-end bg-navy p-6 font-display text-xl font-bold text-white sm:mx-0 sm:h-80 ${attached ? "sm:rounded-b-2xl" : "sm:rounded-2xl"}`}
-        >
-          {title}
+        <div className={`relative -mx-3 overflow-hidden bg-foam sm:mx-0 ${attached ? "sm:rounded-b-2xl" : "sm:rounded-2xl"}`}>
+          <PhotoFrame className="aspect-[4/3] w-full" />
         </div>
         {children}
       </div>
@@ -130,8 +129,7 @@ export function ProductGallery({
         >
           {images.map((image) => (
             <div key={image.path} className="relative min-w-full shrink-0 basis-full snap-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`/media/${image.path}`} alt="" className="pointer-events-none aspect-[4/3] w-full object-cover" />
+              <PhotoFrame path={image.path} className="pointer-events-none aspect-[4/3] w-full object-cover" />
               <Zone
                 label={`Открыть ${title}`}
                 className="inset-x-0"
@@ -163,8 +161,7 @@ export function ProductGallery({
               className={`shrink-0 rounded-md bg-foam ${imageIndex === index ? "ring-2 ring-navy" : ""}`}
               aria-label={`Фото ${imageIndex + 1}`}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`/media/${image.path}`} alt="" className="h-16 w-16 rounded-xl object-cover sm:h-20 sm:w-20" />
+              <PhotoFrame path={image.path} className="h-16 w-16 rounded-md object-cover sm:h-20 sm:w-20" />
             </button>
           ))}
         </div>
@@ -217,8 +214,7 @@ export function ProductGallery({
                     aria-label={`Открыть фото ${imageIndex + 1}`}
                     aria-current={imageIndex === index ? "true" : undefined}
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={`/media/${image.path}`} alt="" className="aspect-[4/3] w-full object-cover" />
+                    <PhotoFrame path={image.path} className="aspect-[4/3] w-full object-cover" />
                   </button>
                 ))}
               </div>
@@ -234,8 +230,7 @@ export function ProductGallery({
                   key={image.path}
                   className="flex h-full min-w-full shrink-0 basis-full snap-center items-center justify-center overflow-auto p-4 touch-auto"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={`/media/${image.path}`} alt="" className="max-h-full max-w-full object-contain" />
+                  <PhotoFrame path={image.path} className="max-h-full max-w-full object-contain" />
                 </div>
               ))}
             </div>

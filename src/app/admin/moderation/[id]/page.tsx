@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { moderateAction } from "@/actions/admin";
 import { CrumbTitle } from "@/components/breadcrumbs";
+import { PhotoFrame } from "@/components/photo-frame";
 import { buttonClass, inputClass, secondaryClass } from "@/components/styles";
 import { db } from "@/db";
 import { listings } from "@/db/schema";
@@ -50,7 +51,7 @@ export default async function ModerationDetailPage({
         <div className="flex gap-2 overflow-x-auto">
           {row.images.map((image) => (
             // eslint-disable-next-line @next/next/no-img-element
-            <img key={image.id} src={`/media/${image.path}`} alt="" className="h-32 w-44 rounded-xl object-cover" />
+            <PhotoFrame key={image.id} path={image.path} className="h-32 w-44 rounded-xl object-cover" />
           ))}
         </div>
       ) : null}

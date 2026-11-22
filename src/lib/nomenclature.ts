@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { categories, nomenclature, stockMovements } from "@/db/schema";
 import { csvRecords } from "@/lib/csv";
@@ -239,6 +239,7 @@ export async function saveNomenclatureItem(
       city: "",
       onOrder: input.onOrder,
       isPublished: input.publish,
+      archivedAt: input.publish ? null : current.archivedAt,
       updatedAt: new Date(),
     })
     .where(eq(nomenclature.id, id));
@@ -254,6 +255,52 @@ export async function saveNomenclatureItem(
   }
   await syncPublishedListing(db, id);
   return id;
+}
+
+async function syncCards(ids: string[]) {
+  for (const id of ids) await syncPublishedListing(db, id);
+}
+
+export async function archiveNomenclature(ids: string[]) {
+  const rows = await db
+    .update(nomenclature)
+    .set({ archivedAt: new Date(), updatedAt: new Date() })
+    .where(and(inArray(nomenclature.id, ids), isNull(nomenclature.archivedAt), isNull(nomenclature.deletedAt)))
+    .returning({ id: nomenclature.id });
+  await syncCards(rows.map((row) => row.id));
+}
+
+export async function restoreNomenclature(ids: string[]) {
+  const rows = await db
+    .update(nomenclature)
+    .set({ archivedAt: null, updatedAt: new Date() })
+    .where(and(inArray(nomenclature.id, ids), isNotNull(nomenclature.archivedAt), isNull(nomenclature.deletedAt)))
+    .returning({ id: nomenclature.id });
+  await syncCards(rows.map((row) => row.id));
+}
+
+export async function purgeNomenclature(ids: string[]) {
+  const rows = await db
+    .select({
+      id: nomenclature.id,
+      sku: nomenclature.sku,
+      archivedAt: nomenclature.archivedAt,
+      deletedAt: nomenclature.deletedAt,
+      quantityReserved: nomenclature.quantityReserved,
+    })
+    .from(nomenclature)
+    .where(inArray(nomenclature.id, ids));
+  if (rows.length === 0) throw new DomainError("Карточки не найдены");
+  if (rows.some((row) => !row.archivedAt || row.deletedAt)) throw new DomainError("Удалить можно только из архива");
+  const reserved = rows.filter((row) => row.quantityReserved > 0).map((row) => row.sku);
+  if (reserved.length > 0) throw new DomainError(`В резерве: ${reserved.join(", ")}`);
+
+  const hidden = await db
+    .update(nomenclature)
+    .set({ deletedAt: new Date(), updatedAt: new Date() })
+    .where(and(inArray(nomenclature.id, ids), isNotNull(nomenclature.archivedAt), isNull(nomenclature.deletedAt)))
+    .returning({ id: nomenclature.id });
+  await syncCards(hidden.map((row) => row.id));
 }
 
 export { availableOf };

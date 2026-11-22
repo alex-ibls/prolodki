@@ -106,8 +106,10 @@ export async function SellerForm({
           Логистика до дилерского центра в Москве, ₽
           <RubleInput
             name="logistics"
+            allowZero
             disabled={locked}
-            defaultValue={listing?.logisticsKopeks ? String(listing.logisticsKopeks / 100) : ""}
+            placeholder="по запросу"
+            defaultValue={listing?.logisticsKopeks == null ? "" : String(listing.logisticsKopeks / 100)}
           />
         </label>
         <label className="text-sm md:col-span-2">

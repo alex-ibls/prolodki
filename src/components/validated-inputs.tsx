@@ -88,14 +88,18 @@ export function TextInput({
   required = false,
   disabled = false,
   min = 0,
+  limit = textInputLimit,
+  placeholder,
 }: {
   name: string;
   defaultValue?: string;
   required?: boolean;
   disabled?: boolean;
   min?: number;
+  limit?: number;
+  placeholder?: string;
 }) {
-  const field = useIssue((value) => textIssue(value, { required, min }), defaultValue);
+  const field = useIssue((value) => textIssue(value, { required, min, limit }), defaultValue);
   const [used, setUsed] = useState(defaultValue.length);
   return (
     <>
@@ -104,7 +108,8 @@ export function TextInput({
         name={name}
         required={required}
         disabled={disabled}
-        maxLength={textInputLimit}
+        maxLength={limit}
+        placeholder={placeholder}
         defaultValue={defaultValue}
         className={fieldClass(Boolean(field.message))}
         onChange={(event) => {
@@ -116,8 +121,8 @@ export function TextInput({
       />
       <span className="mt-1 flex justify-between gap-2 text-xs">
         <span className="text-red-700">{field.message}</span>
-        <span className={used >= textInputLimit ? "font-semibold text-copper" : "text-muted"}>
-          {used} / {textInputLimit}
+        <span className={used >= limit ? "font-semibold text-copper" : "text-muted"}>
+          {used} / {limit}
         </span>
       </span>
     </>
@@ -181,14 +186,18 @@ export function RubleInput({
   defaultValue = "",
   required = false,
   disabled = false,
+  allowZero = false,
+  placeholder,
 }: {
   name: string;
   defaultValue?: string;
   required?: boolean;
   disabled?: boolean;
+  allowZero?: boolean;
+  placeholder?: string;
 }) {
   const initial = formatRublesInput(defaultValue).value;
-  const field = useIssue((value) => rubleIssue(value, required), initial);
+  const field = useIssue((value) => rubleIssue(value, required, allowZero), initial);
   return (
     <>
       <input
@@ -197,11 +206,60 @@ export function RubleInput({
         inputMode="numeric"
         required={required}
         disabled={disabled}
+        placeholder={placeholder}
         defaultValue={initial}
         className={fieldClass(Boolean(field.message))}
         onKeyDown={(event) => blockForeignKey(event, "digits")}
         onBeforeInput={(event) => blockForeign(event, "digits", formatRublesInput, field.onChange)}
         onChange={(event) => field.onChange(paint(event.currentTarget, formatRublesInput))}
+        onBlur={(event) => field.onBlur(event.currentTarget.value)}
+        onInvalid={field.onInvalid}
+      />
+      {field.message ? <span className="mt-1 block text-xs text-red-700">{field.message}</span> : null}
+    </>
+  );
+}
+
+export function CountInput({
+  name,
+  defaultValue = "0",
+  disabled = false,
+}: {
+  name: string;
+  defaultValue?: string;
+  disabled?: boolean;
+}) {
+  const initial = defaultValue.replace(/\D/g, "").replace(/^0+(?=\d)/, "") || "0";
+  const field = useIssue((value) => (value.trim() ? (/^\d+$/.test(value.trim()) ? "" : "Остаток — целое число") : "Укажите остаток"), initial);
+  return (
+    <>
+      <input
+        ref={field.ref}
+        name={name}
+        inputMode="numeric"
+        required
+        disabled={disabled}
+        defaultValue={initial}
+        className={fieldClass(Boolean(field.message))}
+        onKeyDown={(event) => blockForeignKey(event, "digits")}
+        onBeforeInput={(event) =>
+          blockForeign(event, "digits", (raw, caret) => {
+            const end = Math.max(0, Math.min(caret, raw.length));
+            const digitsBefore = raw.slice(0, end).replace(/\D/g, "").replace(/^0+(?=\d)/, "").length;
+            const value = raw.replace(/\D/g, "").replace(/^0+(?=\d)/, "");
+            return { value, caret: Math.min(digitsBefore, value.length) };
+          }, field.onChange)
+        }
+        onChange={(event) =>
+          field.onChange(
+            paint(event.currentTarget, (raw, caret) => {
+              const end = Math.max(0, Math.min(caret, raw.length));
+              const digitsBefore = raw.slice(0, end).replace(/\D/g, "").replace(/^0+(?=\d)/, "").length;
+              const value = raw.replace(/\D/g, "").replace(/^0+(?=\d)/, "");
+              return { value, caret: Math.min(digitsBefore, value.length) };
+            }),
+          )
+        }
         onBlur={(event) => field.onBlur(event.currentTarget.value)}
         onInvalid={field.onInvalid}
       />
