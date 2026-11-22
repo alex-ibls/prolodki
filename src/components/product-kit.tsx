@@ -84,7 +84,7 @@ export function KitProvider({
 }) {
   const restored = pickedFromIds(groups, initialOptionIds);
   const [open, setOpenState] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(Object.keys(restored).map((id) => [id, true])),
+    Object.fromEntries(groups.map((group) => [group.id, true])),
   );
   const [picked, setPicked] = useState<Record<string, string[]>>(restored);
   const timer = useRef<number | null>(null);
