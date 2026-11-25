@@ -7,12 +7,10 @@ export function ProductGallery({
   title,
   images,
   attached = false,
-  children,
 }: {
   title: string;
   images: { path: string }[];
   attached?: boolean;
-  children?: React.ReactNode;
 }) {
   const strip = useRef<HTMLDivElement>(null);
   const lightbox = useRef<HTMLDivElement>(null);
@@ -161,7 +159,6 @@ export function ProductGallery({
           <div className={`relative overflow-hidden bg-foam ${attached ? "rounded-b-[6px]" : "rounded-[6px]"}`}>
             <PhotoFrame className="aspect-[4/3] w-full" />
           </div>
-          <PhotoCorner>{children}</PhotoCorner>
         </div>
       </div>
     );
@@ -204,7 +201,6 @@ export function ProductGallery({
           </>
         ) : null}
       </div>
-        <PhotoCorner>{children}</PhotoCorner>
       </div>
       {images.length > 1 ? (
         <div className="mt-2 flex gap-2 overflow-x-auto px-0.5 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -305,11 +301,6 @@ export function ProductGallery({
       ) : null}
     </div>
   );
-}
-
-function PhotoCorner({ children }: { children?: React.ReactNode }) {
-  if (!children) return null;
-  return <div className="pointer-events-none absolute top-3 left-3 z-10 max-w-[calc(100%-1.5rem)]">{children}</div>;
 }
 
 function viewerModeClass(active: boolean) {

@@ -78,6 +78,7 @@ export default async function ProductPage({
               <CompareButton id={item.id} />
               <ShareButton title={item.title} />
             </div>
+            {highlights.length ? <HighlightSpecs items={highlights} /> : null}
             <TrackView listingId={item.id} slug={item.slug} />
             <ErrorNote message={one("error")} />
             {item.priceKopeks <= 0 ? <p className="mt-4 text-sm">Напишите продавцу, чтобы узнать стоимость.</p> : null}
@@ -101,9 +102,7 @@ export default async function ProductPage({
         </div>
         <div className="contents md:col-start-1 md:row-start-1 md:flex md:flex-col md:gap-4">
           <div className="order-2 md:order-none">
-            <ProductGallery title={item.title} images={item.images}>
-              {highlights.length ? <HighlightSpecs items={highlights} /> : null}
-            </ProductGallery>
+            <ProductGallery title={item.title} images={item.images} />
           </div>
           <ProductCost />
         </div>

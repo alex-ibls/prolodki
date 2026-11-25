@@ -67,14 +67,14 @@ export function highlightSpecs(item: { attributes: SpecSource[] }) {
 export function HighlightSpecs({ items }: { items: SpecSource[] }) {
   if (items.length === 0) return null;
   return (
-    <ul className="flex max-w-full flex-wrap gap-1.5">
+    <ul className="mt-3 flex max-w-full flex-wrap gap-1.5">
       {items.map((spec) => {
         const text = spec.valueText?.trim() ?? "";
         const raw = text || (spec.valueNumber === null ? "" : String(spec.valueNumber));
         const unit = spec.definition.unit.trim();
         const value = unit && raw.endsWith(unit) ? raw.slice(0, -unit.length).trim() : raw;
         return (
-          <li key={spec.definition.code} className="flex min-w-0 flex-col items-center rounded-full border border-line bg-white px-3 py-1 text-center shadow-[0_6px_16px_rgba(15,23,42,0.35)]">
+          <li key={spec.definition.code} className="flex min-w-0 flex-col items-center px-3 py-1 text-center">
             <span className="text-[10px] leading-3 text-muted">{spec.definition.name}</span>
             <span className="text-sm font-semibold leading-4 text-deep">
               {value}
