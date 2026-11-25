@@ -1,6 +1,6 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { cartItems, carts, listings } from "@/db/schema";
+import { cartItems, carts, listingImages, listings } from "@/db/schema";
 import { DomainError } from "@/lib/errors";
 import { ensureGuestToken, readGuestToken } from "@/lib/guest";
 import { quoteKit } from "@/lib/kit";
@@ -54,7 +54,7 @@ export async function getCartView() {
     where: eq(cartItems.cartId, cart.id),
     with: {
       listing: {
-        with: { images: { limit: 1 } },
+        with: { images: { limit: 1, orderBy: asc(listingImages.sort) } },
       },
     },
   });

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { checkoutAction, updateCartAction } from "@/actions/store";
 import { ErrorNote } from "@/components/catalog-ui";
+import { PhotoFrame } from "@/components/photo-frame";
 import { actionClass, inputClass, pageFrame, panelClass, secondaryClass } from "@/components/styles";
 import { getCartView } from "@/lib/cart";
 import { deliveryTerm, formatRub } from "@/lib/format";
@@ -62,9 +63,14 @@ export default async function CheckoutPage({
       {orderable.length > 0 ? (
         <div className="grid gap-3">
           {orderable.map((item) => (
-            <section key={item.listingId} className={`${panelClass} flex flex-col`}>
-              <h2 className="text-base font-semibold text-deep">Расчёт стоимости</h2>
-              <p className="mt-3 font-semibold">{item.listing.title}</p>
+            <section key={item.listingId} className={`${panelClass} flex gap-4`}>
+              <PhotoFrame
+                path={item.listing.images[0]?.path}
+                alt=""
+                className="h-24 w-32 shrink-0 rounded-[6px] object-cover"
+              />
+              <div className="min-w-0 flex-1">
+              <p className="font-semibold">{item.listing.title}</p>
               <dl className="mt-3 divide-y divide-line border-y border-line text-sm">
                 <div className="flex items-start justify-between gap-3 py-2">
                   <dt>Базовая цена</dt>
@@ -118,6 +124,7 @@ export default async function CheckoutPage({
                     <button className={secondaryClass}>Отменить</button>
                   </form>
                 </div>
+              </div>
               </div>
             </section>
           ))}
