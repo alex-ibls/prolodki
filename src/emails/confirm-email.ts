@@ -31,7 +31,7 @@ export function confirmEmailLetter(input: { name: string; confirmUrl: string }) 
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f9fd;padding:32px 12px;">
       <tr>
         <td align="center">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:24px;overflow:hidden;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:6px;overflow:hidden;">
             <tr>
               <td style="background:#1f6cb5;color:#ffffff;padding:22px 28px;font-size:22px;letter-spacing:0.04em;">
                 ${escapeHtml(site.name)}
@@ -44,7 +44,7 @@ export function confirmEmailLetter(input: { name: string; confirmUrl: string }) 
                   Подтвердите email на ${escapeHtml(site.name)}.
                   В кабинет можно входить и без этого.
                 </p>
-                <a href="${safeUrl}" style="display:inline-block;background:#2a7ad4;color:#ffffff;text-decoration:none;border-radius:999px;padding:12px 20px;font-weight:700;">
+                <a href="${safeUrl}" style="display:inline-block;background:#2a7ad4;color:#ffffff;text-decoration:none;border-radius:6px;padding:12px 20px;font-weight:700;">
                   Подтвердить email
                 </a>
                 <p style="margin:20px 0 0;font-size:13px;line-height:1.5;color:#5c7690;">

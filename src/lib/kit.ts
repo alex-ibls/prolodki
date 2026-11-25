@@ -1,4 +1,4 @@
-import { asc, eq, inArray } from "drizzle-orm";
+import { asc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { kitItems, nomenclatureKitGroups, nomenclatureKitLinks } from "@/db/schema";
 import { DomainError } from "@/lib/errors";
@@ -8,6 +8,7 @@ export type KitKind = "fit" | "extra";
 
 export type KitChoice = {
   id: string;
+  sku: string;
   name: string;
   priceKopeks: number;
   imagePath: string;
@@ -23,8 +24,85 @@ export type KitGroup = {
 type DraftItem = { id?: string; name?: string; priceRub?: string; fileKey?: string };
 type DraftGroup = { name?: string; kind?: string; items?: DraftItem[] };
 
-export async function listKitLibrary() {
-  return db.select().from(kitItems).orderBy(asc(kitItems.name));
+export async function listKitLibrary(query = "") {
+  const needle = query.trim().replace(/[%_]/g, "");
+  const where = needle
+    ? or(ilike(kitItems.sku, `%${needle}%`), ilike(kitItems.name, `%${needle}%`))
+    : undefined;
+  return db.select().from(kitItems).where(where).orderBy(asc(kitItems.kind), asc(kitItems.sku), asc(kitItems.name));
+}
+
+export async function kitUsageCounts() {
+  const rows = await db
+    .select({ itemId: nomenclatureKitLinks.itemId, n: sql<number>`count(*)::int` })
+    .from(nomenclatureKitLinks)
+    .groupBy(nomenclatureKitLinks.itemId);
+  return new Map(rows.map((row) => [row.itemId, Number(row.n)]));
+}
+
+export async function saveKitCatalogItem(formData: FormData) {
+  const id = String(formData.get("id") || "").trim();
+  const kind = formData.get("kind") === "extra" ? "extra" : formData.get("kind") === "fit" ? "fit" : null;
+  if (!kind) throw new DomainError("Укажите тип: исполнение или дополнительное оборудование");
+  const sku = String(formData.get("sku") || "").trim().toUpperCase();
+  if (!sku) throw new DomainError("Укажите артикул");
+  if (sku.length > 40) throw new DomainError("Артикул — не больше 40 символов");
+  if (/[./\\?#%\s]/.test(sku)) throw new DomainError("Артикул без пробелов и символов / . ? # %");
+  const name = String(formData.get("name") || "").trim();
+  if (!name) throw new DomainError("Укажите название");
+  if (name.length > 80) throw new DomainError("Название — не больше 80 символов");
+  const priceKopeks = readKitPrice(String(formData.get("priceRub") || ""));
+  const duplicate = await db.query.kitItems.findFirst({ where: eq(kitItems.sku, sku) });
+  if (duplicate && duplicate.id !== id) throw new DomainError("Такой артикул уже есть");
+  const current = id ? await db.query.kitItems.findFirst({ where: eq(kitItems.id, id) }) : null;
+  if (id && !current) throw new DomainError("Элемент не найден");
+  if (current && current.kind !== kind && (await kitLinkCount(current.id)) > 0) {
+    throw new DomainError("Тип нельзя сменить: элемент уже выбран в карточках");
+  }
+  const file = formData.get("image");
+  let imagePath = current?.imagePath ?? "";
+  if (file instanceof File && file.size > 0) {
+    const stored = await savePhoto("kit", file);
+    if (stored) imagePath = stored;
+  }
+  if (!current) {
+    const [created] = await db.insert(kitItems).values({ kind, sku, name, priceKopeks, imagePath }).returning();
+    if (!created) throw new DomainError("Не получилось сохранить элемент");
+    return created;
+  }
+  const [updated] = await db
+    .update(kitItems)
+    .set({ kind, sku, name, priceKopeks, imagePath })
+    .where(eq(kitItems.id, current.id))
+    .returning();
+  if (!updated) throw new DomainError("Не получилось сохранить элемент");
+  if (imagePath !== current.imagePath && current.imagePath) await deleteStored(current.imagePath);
+  return updated;
+}
+
+export async function getKitCatalogItem(id: string) {
+  return db.query.kitItems.findFirst({ where: eq(kitItems.id, id) });
+}
+
+export async function kitItemUsage(id: string) {
+  return kitLinkCount(id);
+}
+
+export async function deleteKitCatalogItem(id: string) {
+  const item = await db.query.kitItems.findFirst({ where: eq(kitItems.id, id) });
+  if (!item) throw new DomainError("Элемент не найден");
+  const used = await kitLinkCount(id);
+  if (used > 0) throw new DomainError(`«${item.name}» выбран в карточках (${used}). Сначала уберите его из групп.`);
+  if (item.imagePath) await deleteStored(item.imagePath);
+  await db.delete(kitItems).where(eq(kitItems.id, id));
+}
+
+async function kitLinkCount(id: string) {
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(nomenclatureKitLinks)
+    .where(eq(nomenclatureKitLinks.itemId, id));
+  return Number(row?.n ?? 0);
 }
 
 export async function kitForNomenclature(nomenclatureId: string): Promise<KitGroup[]> {
@@ -51,7 +129,7 @@ export async function kitForNomenclature(nomenclatureId: string): Promise<KitGro
       .flatMap((link) => {
         const item = byId.get(link.itemId);
         if (!item) return [];
-        return [{ id: item.id, name: item.name, priceKopeks: item.priceKopeks, imagePath: item.imagePath }];
+        return [{ id: item.id, sku: item.sku, name: item.name, priceKopeks: item.priceKopeks, imagePath: item.imagePath }];
       }),
   }));
 }
@@ -103,19 +181,7 @@ export async function saveNomenclatureKit(nomenclatureId: string, formData: Form
         if (!itemIds.includes(found.id)) itemIds.push(found.id);
         continue;
       }
-      const itemName = String(item.name || "").trim();
-      if (!itemName) throw new DomainError("Укажите название элемента");
-      if (itemName.length > 80) throw new DomainError("Название элемента — не больше 80 символов");
-      const priceKopeks = readKitPrice(String(item.priceRub || ""));
-      const fileKey = String(item.fileKey || "");
-      const file = fileKey ? formData.get(`kitFile:${fileKey}`) : null;
-      const imagePath = file instanceof File && file.size > 0 ? (await savePhoto("kit", file)) || "" : "";
-      const [created] = await db
-        .insert(kitItems)
-        .values({ kind, name: itemName, priceKopeks, imagePath })
-        .returning();
-      byId.set(created.id, created);
-      itemIds.push(created.id);
+      throw new DomainError("Добавьте элемент из каталога комплектаций");
     }
     if (itemIds.length === 0) throw new DomainError(`Добавьте элементы в группу «${name}»`);
     prepared.push({ name, kind, itemIds });

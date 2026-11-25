@@ -1,39 +1,31 @@
 "use client";
 
 import { useActionState } from "react";
-import { importCsvAction, type ImportState } from "@/actions/admin";
+import { importWorkbookAction, type ImportState } from "@/actions/admin";
 import { buttonClass, inputClass, secondaryClass } from "@/components/styles";
 
-const fullSample = `sku,title,category_slug,brand,model,year,price,compare_at_price,quantity,availability,description
-SV-391,Лодка Север 391,alum-tiller,Риверботс,391,2026,210000,,2,в наличии,Короткое описание`;
-
-const correctionSample = `sku,price,quantity
-SV-390,205000,3`;
-
 export function ImportForm() {
-  const [state, action, pending] = useActionState(importCsvAction, null as ImportState);
+  const [state, action, pending] = useActionState(importWorkbookAction, null as ImportState);
   return (
     <form action={action} className="grid gap-4">
-      <label className="text-sm">
-        Режим
-        <select name="mode" className={inputClass} defaultValue="full">
-          <option value="full">Загрузка карточек</option>
-          <option value="correction">Корректировка цены и остатка</option>
-        </select>
-      </label>
-      <label className="text-sm">
-        CSV-файл
-        <input name="file" type="file" accept=".csv,text/csv" className={inputClass} />
-      </label>
-      <label className="text-sm">
-        Или вставьте текст
-        <textarea name="csv" rows={8} className={inputClass} placeholder={fullSample} />
-      </label>
       <p className="text-sm text-muted">
-        Корректировка: <code>{correctionSample.split("\n")[0]}</code>
+        Загрузите файл Excel в том виде, в котором его скачивает админка. Колонки: артикул, название, категория, цена, склад, витрина. Резерв, доступный остаток и дата добавления не меняются.
       </p>
+      <a href="/admin/export?entity=nomenclature" className={`${secondaryClass} w-fit`}>
+        Скачать текущий файл
+      </a>
+      <label className="text-sm">
+        Файл Excel
+        <input
+          name="file"
+          type="file"
+          required
+          accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          className={inputClass}
+        />
+      </label>
       <button className={pending ? secondaryClass : buttonClass} disabled={pending}>
-        {pending ? "Загрузка…" : "Применить"}
+        {pending ? "Загрузка…" : "Загрузить"}
       </button>
       {state && "error" in state ? <p className="text-sm text-red-700">{state.error}</p> : null}
       {state && "applied" in state ? (

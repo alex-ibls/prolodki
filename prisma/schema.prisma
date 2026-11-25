@@ -117,6 +117,7 @@ model favorites {
 model kit_items {
   id                     String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   kind                   String
+  sku                    String                   @unique
   name                   String
   price_kopeks           Int
   image_path             String                   @default("")

@@ -13,7 +13,7 @@ export function IconPicker({ name, value }: { name: string; value: string }) {
       <input type="hidden" name={name} value={icon} />
       <button
         type="button"
-        className="mt-1 flex h-10 w-full items-center gap-2 border border-line bg-white px-2 text-sm text-ink"
+        className="mt-1 flex h-10 w-full items-center gap-2 rounded-[6px] border border-line bg-white px-2 text-sm text-ink"
         aria-label={`Иконка: ${current.label}`}
         aria-expanded={open}
         onClick={() => setOpen((next) => !next)}
@@ -24,12 +24,12 @@ export function IconPicker({ name, value }: { name: string; value: string }) {
       {open ? (
         <>
           <button type="button" className="fixed inset-0 z-30" aria-label="Закрыть выбор иконки" onClick={() => setOpen(false)} />
-          <div className="absolute bottom-full left-0 z-40 mb-1 grid w-56 grid-cols-4 gap-1 border border-line bg-white p-1">
+          <div className="absolute bottom-full left-0 z-40 mb-1 grid w-56 grid-cols-4 gap-1 rounded-[6px] border border-line bg-white p-1">
             {characteristicIcons.map((item) => (
               <button
                 key={item.id || "circle"}
                 type="button"
-                className={`flex h-10 items-center justify-center text-deep ${item.id === icon ? "bg-deep text-white" : "hover:bg-foam"}`}
+                className={`flex h-10 items-center justify-center rounded-[6px] text-deep ${item.id === icon ? "bg-deep text-white" : "hover:bg-foam"}`}
                 aria-label={item.label}
                 aria-pressed={item.id === icon}
                 onClick={() => {

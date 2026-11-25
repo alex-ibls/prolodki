@@ -221,6 +221,7 @@ export const listings = pgTable("listings", {
 export const kitItems = pgTable("kit_items", {
   id: uuid("id").defaultRandom().primaryKey(),
   kind: text("kind").notNull(),
+  sku: text("sku").notNull().unique(),
   name: text("name").notNull(),
   priceKopeks: integer("price_kopeks").notNull(),
   imagePath: text("image_path").notNull().default(""),

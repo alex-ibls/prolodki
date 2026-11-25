@@ -13,7 +13,7 @@ import { requireManager, runAction } from "@/lib/guards";
 import { saveNomenclatureKit } from "@/lib/kit";
 import { defsForCategory, readAttributeValues, readLogisticsAndLead } from "@/lib/listings";
 import { assertLeafCategory, ensureBrandName } from "@/lib/taxonomy";
-import { importNomenclatureCsv, saveNomenclatureItem, type ImportReport } from "@/lib/nomenclature";
+import { importNomenclatureSheet, saveNomenclatureItem, type ImportReport } from "@/lib/nomenclature";
 import { attachNomenclaturePhotos } from "@/lib/photos";
 
 export async function moderateAction(formData: FormData) {
@@ -213,14 +213,15 @@ export async function saveNomenclatureAction(
 
 export type ImportState = ImportReport | { error: string } | null;
 
-export async function importCsvAction(_prev: ImportState, formData: FormData): Promise<ImportState> {
+export async function importWorkbookAction(_prev: ImportState, formData: FormData): Promise<ImportState> {
   const user = await requireManager();
   try {
     const file = formData.get("file");
-    let text = String(formData.get("csv") || "");
-    if (file instanceof File && file.size > 0) text = await file.text();
-    const mode = formData.get("mode") === "correction" ? "correction" : "full";
-    return await importNomenclatureCsv(user.id, text, mode);
+    if (!(file instanceof File) || file.size === 0) throw new DomainError("Выберите файл Excel");
+    if (!file.name.toLowerCase().endsWith(".xlsx")) throw new DomainError("Нужен файл Excel .xlsx");
+    const { readXlsxBuffer } = await import("@/lib/xlsx-table");
+    const records = readXlsxBuffer(Buffer.from(await file.arrayBuffer()));
+    return await importNomenclatureSheet(user.id, records);
   } catch (error) {
     return { error: error instanceof DomainError ? error.message : "Не удалось прочитать файл" };
   }

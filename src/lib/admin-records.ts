@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, ilike, inArray, isNotNull, isNull, or, sql, type SQL, type SQLWrapper } from "drizzle-orm";
 import { db } from "@/db";
-import { categories, customers, deals, listings, nomenclature, orderItems, orders } from "@/db/schema";
+import { categories, customers, deals, kitItems, listings, nomenclature, orderItems, orders } from "@/db/schema";
 import {
   adminExportLimit,
   adminPageSize,
@@ -21,6 +21,7 @@ import {
   listingStatusLabel,
   sourceLabel,
 } from "@/lib/labels";
+import { kitUsageCounts } from "@/lib/kit";
 import { deriveOrderStatus } from "@/lib/orders";
 import { availableOf, companyOrg } from "@/lib/stock";
 import { allBrands, categoryPath, type CategoryNode } from "@/lib/taxonomy";
@@ -73,6 +74,14 @@ export const brandColumns: AdminColumn[] = [
   { key: "name", label: "Название", sort: "name", firstDir: "asc" },
   { key: "sort", label: "Порядок", sort: "sort", firstDir: "asc" },
   { key: "slug", label: "Адрес" },
+];
+
+export const kitColumns: AdminColumn[] = [
+  { key: "sku", label: "Артикул", sort: "sku", firstDir: "asc" },
+  { key: "name", label: "Название", sort: "name", firstDir: "asc" },
+  { key: "kind", label: "Тип", sort: "kind", firstDir: "asc" },
+  { key: "price", label: "Цена", sort: "price", firstDir: "desc" },
+  { key: "used", label: "В карточках" },
 ];
 
 export const nomenclatureColumns: AdminColumn[] = [
@@ -240,6 +249,55 @@ export async function listBrands(one: Reader, scope?: Scope): Promise<AdminPage>
     href: `/admin/brands/${item.id}`,
     cells: { name: item.name, sort: String(item.sort), slug: item.slug },
   }));
+}
+
+export async function listKit(one: Reader, scope?: Scope): Promise<AdminPage> {
+  const state = readList(one, ["sku", "name", "kind", "price"], "sku", "asc");
+  const kind = one("kind") === "fit" || one("kind") === "extra" ? one("kind") : "";
+  const pattern = state.q ? likePattern(state.q) : "";
+  const where = whereAnd(
+    kind ? eq(kitItems.kind, kind) : undefined,
+    pattern ? or(ilike(kitItems.sku, pattern), ilike(kitItems.name, pattern)) : undefined,
+    uuidFilter(kitItems.id, scope?.ids),
+  );
+  const column =
+    state.sort === "name"
+      ? kitItems.name
+      : state.sort === "kind"
+        ? kitItems.kind
+        : state.sort === "price"
+          ? kitItems.priceKopeks
+          : kitItems.sku;
+  const usage = await kitUsageCounts();
+  return finish(
+    state,
+    scope,
+    { kind },
+    async () => {
+      const [row] = await db.select({ n: count() }).from(kitItems).where(where);
+      return row?.n ?? 0;
+    },
+    async (limit, offset) => {
+      const rows = await db
+        .select()
+        .from(kitItems)
+        .where(where)
+        .orderBy(state.dir === "asc" ? asc(column) : desc(column), asc(kitItems.sku))
+        .limit(limit)
+        .offset(offset);
+      return rows.map((row) => ({
+        id: row.id,
+        href: `/admin/kit/${row.id}`,
+        cells: {
+          sku: row.sku,
+          name: row.name,
+          kind: row.kind === "extra" ? "Доп. оборудование" : "Исполнение",
+          price: formatRub(row.priceKopeks),
+          used: String(usage.get(row.id) ?? 0),
+        },
+      }));
+    },
+  );
 }
 
 export async function listNomenclature(one: Reader, scope?: Scope): Promise<AdminPage> {
@@ -445,6 +503,7 @@ const exporters = {
   deals: { file: "сделки.xlsx", columns: dealColumns, load: listDeals },
   catalog: { file: "каталог.xlsx", columns: catalogColumns, load: listCatalog },
   brands: { file: "бренды.xlsx", columns: brandColumns, load: listBrands },
+  kit: { file: "комплектации.xlsx", columns: kitColumns, load: listKit },
   nomenclature: { file: "номенклатура.xlsx", columns: nomenclatureColumns, load: listNomenclature },
   orders: { file: "заказы.xlsx", columns: orderColumns, load: listOrders },
   moderation: { file: "модерация.xlsx", columns: moderationColumns, load: listModeration },

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { CompareNavLink } from "@/components/compare-ui";
 import { Logo } from "@/components/logo";
 import { MobileNav } from "@/components/mobile-nav";
 import { CatalogSearch } from "@/components/catalog-search";
@@ -59,6 +60,7 @@ export async function SiteHeader() {
                   {item.label}
                 </Link>
               ))}
+              <CompareNavLink className="px-3 py-3 text-sm text-white/90 hover:text-white" />
             </nav>
             <Link href="/cart" className={`${cartLinkClass} ml-auto`}>
               <CartGlyph />

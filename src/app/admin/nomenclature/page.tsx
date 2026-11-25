@@ -110,7 +110,7 @@ export default async function NomenclaturePage({
         toolbar={
           <>
             <Link href="/admin/nomenclature/import" className={secondaryClass}>
-              Загрузка CSV
+              Загрузка Excel
             </Link>
             <Link href="/admin/nomenclature/new" className={buttonClass}>
               Новая позиция

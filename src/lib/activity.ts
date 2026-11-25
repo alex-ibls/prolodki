@@ -168,6 +168,19 @@ export async function listingStats(ids: string[]) {
   return map;
 }
 
+export async function savedListingIds(listingIds: string[]) {
+  const ids = [...new Set(listingIds)];
+  if (ids.length === 0) return new Set<string>();
+  const user = await getCurrentUser();
+  const token = user ? null : await readGuestToken();
+  if (!user && !token) return new Set<string>();
+  const rows = await db.query.favorites.findMany({
+    where: and(inArray(favorites.listingId, ids), user ? eq(favorites.userId, user.id) : eq(favorites.guestToken, token!)),
+    columns: { listingId: true },
+  });
+  return new Set(rows.map((row) => row.listingId));
+}
+
 export async function isFavorite(listingId: string) {
   const user = await getCurrentUser();
   if (user) {

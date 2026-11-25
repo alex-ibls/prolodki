@@ -1,6 +1,6 @@
 import { ProductGrid, listingCard } from "@/components/catalog-ui";
 import { pageFrame } from "@/components/styles";
-import { viewedListings } from "@/lib/activity";
+import { savedListingIds, viewedListings } from "@/lib/activity";
 import { allCategories } from "@/lib/catalog";
 import { categoryPathMap } from "@/lib/sef";
 import { getCurrentUser } from "@/lib/session";
@@ -12,6 +12,8 @@ export default async function HistoryPage() {
   const user = await getCurrentUser();
   const items = await viewedListings();
   const paths = categoryPathMap(withoutDemo(await allCategories()));
+  const cards = items.map((item) => listingCard(item, paths));
+  const saved = await savedListingIds(cards.flatMap((item) => (item.id ? [item.id] : [])));
   return (
     <main className={`${pageFrame} max-w-6xl`}>
       <h1 className="font-display text-xl font-extrabold tracking-tight text-deep md:text-2xl">История просмотров</h1>
@@ -20,7 +22,7 @@ export default async function HistoryPage() {
         <p className="mt-6 text-muted">Вы ещё ничего не смотрели.</p>
       ) : (
         <div className="mt-4">
-          <ProductGrid items={items.map((item) => listingCard(item, paths))} />
+          <ProductGrid items={cards.map((item) => ({ ...item, saved: item.id ? saved.has(item.id) : false }))} />
         </div>
       )}
     </main>

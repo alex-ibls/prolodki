@@ -1,28 +1,61 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { toggleFavoriteAction } from "@/actions/activity";
+import { toggleFavoriteAction, toggleFavoriteQuietAction } from "@/actions/activity";
 import { HeartIcon, ShareIcon } from "@/components/action-icons";
-import { iconActionClass } from "@/components/styles";
+
+const iconButtonClass =
+  "inline-flex h-10 w-10 items-center justify-center rounded-[6px] border border-line bg-white text-navy hover:border-navy";
+const photoIconClass =
+  "inline-flex h-9 w-9 items-center justify-center text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]";
 
 export function FavoriteButton({
   listingId,
   slug,
   saved,
   back,
+  labeled = false,
+  stay = false,
 }: {
   listingId: string;
   slug: string;
   saved: boolean;
   back?: string;
+  labeled?: boolean;
+  stay?: boolean;
 }) {
+  const [pressed, setPressed] = useState(saved);
+  useEffect(() => {
+    setPressed(saved);
+  }, [saved]);
+  const shown = stay ? pressed : saved;
+  const label = shown ? "В избранном" : "В избранное";
+  const className = labeled
+    ? `${iconButtonClass} text-sm font-semibold md:h-auto md:w-auto md:gap-2 md:px-3 md:py-2`
+    : photoIconClass;
+
+  function keep() {
+    const next = !pressed;
+    setPressed(next);
+    void toggleFavoriteQuietAction(listingId).then(setPressed, () => setPressed(!next));
+  }
+
+  if (stay) {
+    return (
+      <button type="button" className={className} aria-label={label} aria-pressed={shown} onMouseDown={(event) => event.preventDefault()} onClick={keep}>
+        <HeartIcon filled={shown} />
+      </button>
+    );
+  }
+
   return (
-    <form action={toggleFavoriteAction}>
+    <form action={toggleFavoriteAction} className="inline-flex">
       <input type="hidden" name="listingId" value={listingId} />
       <input type="hidden" name="slug" value={slug} />
       {back ? <input type="hidden" name="back" value={back} /> : null}
-      <button type="submit" className={iconActionClass} aria-label={saved ? "В избранном" : "В избранное"} aria-pressed={saved}>
-        <HeartIcon filled={saved} />
+      <button type="submit" className={className} aria-label={label} aria-pressed={shown}>
+        <HeartIcon filled={shown} />
+        {labeled ? <span className="hidden md:inline">{label}</span> : null}
       </button>
     </form>
   );
@@ -67,7 +100,7 @@ export function ShareButton({ title }: { title: string }) {
     <div className="relative">
       <button
         type="button"
-        className={iconActionClass}
+        className="inline-flex h-10 w-10 items-center justify-center rounded-[6px] border border-line bg-white text-sm font-semibold text-navy hover:border-navy md:h-auto md:w-auto md:gap-2 md:px-3 md:py-2"
         aria-label="Поделиться"
         aria-haspopup="menu"
         aria-expanded={open}
@@ -77,14 +110,12 @@ export function ShareButton({ title }: { title: string }) {
         }}
       >
         <ShareIcon />
+        <span className="hidden md:inline">Поделиться</span>
       </button>
       {open ? (
         <>
           <button type="button" className="fixed inset-0 z-30" aria-label="Закрыть" onClick={() => setOpen(false)} />
-          <div
-            role="menu"
-            className="absolute bottom-full left-0 z-40 mb-2 grid w-52 gap-1 rounded border border-line bg-white p-1 md:bottom-auto md:top-full md:mt-2 md:mb-0"
-          >
+          <div role="menu" className="absolute left-0 top-full z-40 mt-2 grid w-52 gap-1 rounded-[6px] border border-line bg-white p-1">
             {networks.map((item) => (
               <a
                 key={item.id}

@@ -21,6 +21,8 @@ const labels: Record<string, string> = {
   import: "Загрузка",
   moderation: "Модерация",
   deals: "Сделки",
+  compare: "Сравнение",
+  kit: "Комплектации",
 };
 
 export function crumbsForPath(pathname: string, names: Record<string, string> = {}): Crumb[] {
@@ -87,9 +89,11 @@ function decodeSegment(segment: string) {
 
 function segmentLabel(segment: string, parent: string | undefined, root: string) {
   if (uuid.test(segment)) {
+    if (parent === "compare") return null;
     if (parent === "orders") return "Заказ";
     if (parent === "listings") return "Товар";
     if (parent === "nomenclature") return "Позиция";
+    if (parent === "kit") return "Позиция";
     if (parent === "customers") return "Клиент";
     if (parent === "deals") return "Сделка";
     if (parent === "moderation") return "Товар";

@@ -26,6 +26,7 @@ async function AdminFrame({ children }: { children: React.ReactNode }) {
                 { href: "/admin/catalog", label: "Каталог" },
                 { href: "/admin/brands", label: "Бренды" },
                 { href: "/admin/nomenclature", label: "Номенклатура" },
+                { href: "/admin/kit", label: "Комплектации" },
                 { href: "/admin/orders", label: "Заказы 1P" },
               ]
             : []),

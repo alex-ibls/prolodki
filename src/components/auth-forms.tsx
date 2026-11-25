@@ -156,9 +156,9 @@ function PasswordMeter({ password }: { password: string }) {
         aria-valuemax={4}
         aria-valuenow={score}
         aria-valuetext={level.label || "Пароль не задан"}
-        className="h-2 overflow-hidden rounded-full bg-line"
+        className="h-2 overflow-hidden rounded-[6px] bg-line"
       >
-        <div className={`h-full rounded-full transition-[width] ${level.bar}`} style={{ width: `${score * 25}%` }} />
+        <div className={`h-full rounded-[6px] transition-[width] ${level.bar}`} style={{ width: `${score * 25}%` }} />
       </div>
       {level.label ? <p className={`mt-1 text-xs ${level.text}`}>{level.label}</p> : null}
     </div>

@@ -1,6 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
+import type { CreatedKitItem } from "@/actions/kit";
+import { KitCreateButton } from "@/components/kit-create-dialog";
 import { PhotoFrame } from "@/components/photo-frame";
 import { inputClass, secondaryClass } from "@/components/styles";
 import { formatRub } from "@/lib/format";
@@ -9,6 +12,7 @@ type Kind = "fit" | "extra";
 
 type LibraryItem = {
   id: string;
+  sku: string;
   kind: string;
   name: string;
   priceKopeks: number;
@@ -17,7 +21,8 @@ type LibraryItem = {
 
 type DraftItem = {
   key: string;
-  id: string | null;
+  id: string;
+  sku: string;
   name: string;
   priceRub: string;
   imagePath: string;
@@ -35,12 +40,13 @@ type DraftGroup = {
 };
 
 export function KitEditor({
-  library,
+  library: initialLibrary,
   initial,
 }: {
   library: LibraryItem[];
-  initial: { name: string; kind: Kind; items: { id: string; name: string; priceKopeks: number; imagePath: string }[] }[];
+  initial: { name: string; kind: Kind; items: { id: string; sku: string; name: string; priceKopeks: number; imagePath: string }[] }[];
 }) {
+  const [library, setLibrary] = useState(initialLibrary);
   const [groups, setGroups] = useState<DraftGroup[]>(() =>
     initial.map((group) => ({
       key: crypto.randomUUID(),
@@ -51,6 +57,7 @@ export function KitEditor({
       items: group.items.map((item) => ({
         key: item.id,
         id: item.id,
+        sku: item.sku,
         name: item.name,
         priceRub: String(item.priceKopeks / 100),
         imagePath: item.imagePath,
@@ -81,6 +88,10 @@ export function KitEditor({
     setGroups((current) => current.map((group) => (group.key === key ? { ...group, ...next } : group)));
   }
 
+  function remember(item: CreatedKitItem) {
+    setLibrary((current) => (current.some((row) => row.id === item.id) ? current : [...current, item]));
+  }
+
   function addLibraryItem(group: DraftGroup, item: LibraryItem) {
     if (group.items.some((row) => row.id === item.id)) return;
     patch(group.key, {
@@ -90,6 +101,7 @@ export function KitEditor({
         {
           key: item.id,
           id: item.id,
+          sku: item.sku,
           name: item.name,
           priceRub: String(item.priceKopeks / 100),
           imagePath: item.imagePath,
@@ -118,16 +130,6 @@ export function KitEditor({
     });
   }
 
-  function addNewItem(group: DraftGroup) {
-    const fileKey = crypto.randomUUID();
-    patch(group.key, {
-      items: [
-        ...group.items,
-        { key: fileKey, id: null, name: "", priceRub: "", imagePath: "", fileKey, preview: "" },
-      ],
-    });
-  }
-
   return (
     <section className="grid gap-3 border-t border-line pt-4">
       <div className="flex items-center justify-between gap-3">
@@ -137,7 +139,11 @@ export function KitEditor({
         </button>
       </div>
       <p className="text-sm text-muted">
-        Исполнение — один вариант в группе. Дополнительное оборудование можно выбрать несколько пунктов. Название, цена и иллюстрация общие: правка видна во всех карточках, где выбран этот элемент.
+        Исполнение — один вариант в группе. Дополнительное оборудование можно выбрать несколько пунктов. Позиции берутся из{" "}
+        <Link href="/admin/kit" className="text-navy">
+          каталога
+        </Link>
+        : ищите артикул или название. Название, цена и иллюстрация общие для всех карточек.
       </p>
       <input type="hidden" name="kitJson" value={payload} />
       {groups.map((group) => {
@@ -145,7 +151,8 @@ export function KitEditor({
           if (item.kind !== group.kind) return false;
           if (group.items.some((row) => row.id === item.id)) return false;
           const query = group.query.trim().toLocaleLowerCase("ru");
-          return !query || item.name.toLocaleLowerCase("ru").includes(query);
+          const hay = `${item.sku} ${item.name}`.toLocaleLowerCase("ru");
+          return !query || hay.includes(query);
         });
         const title = group.name.trim() || "Новая группа";
         const kindLabel = group.kind === "extra" ? "Доп. оборудование" : "Исполнение";
@@ -184,7 +191,7 @@ export function KitEditor({
                     const kind = event.target.value === "extra" ? "extra" : "fit";
                     patch(group.key, {
                       kind,
-                      items: group.items.filter((item) => item.id === null || library.find((row) => row.id === item.id)?.kind === kind),
+                      items: group.items.filter((item) => library.find((row) => row.id === item.id)?.kind === kind),
                     });
                   }}
                 >
@@ -202,9 +209,10 @@ export function KitEditor({
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               {group.items.map((item) => (
-                <div key={item.key} className="grid border border-line">
+                <div key={item.key} className="grid overflow-hidden rounded-[6px] border border-line">
                   <PhotoFrame path={item.preview || item.imagePath} className="block aspect-[4/3] w-full object-contain" />
                   <div className="grid gap-2 p-3">
+                  <p className="text-sm text-muted">Артикул {item.sku}</p>
                   <label className="text-sm">
                     Название
                     <input
@@ -251,30 +259,42 @@ export function KitEditor({
                 </div>
               ))}
             </div>
-            <label className="text-sm">
-              Уже добавленные
-              <input
-                value={group.query}
-                placeholder="Начните вводить название"
-                className={inputClass}
-                onChange={(event) => patch(group.key, { query: event.target.value })}
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="min-w-0 flex-1 text-sm">
+                Найти в каталоге
+                <input
+                  value={group.query}
+                  placeholder="Артикул или название"
+                  className={inputClass}
+                  onChange={(event) => patch(group.key, { query: event.target.value })}
+                />
+              </label>
+              <KitCreateButton
+                label="Новая позиция"
+                className={secondaryClass}
+                defaultKind={group.kind}
+                lockKind
+                {...querySeed(group.query)}
+                onCreated={(item) => {
+                  remember(item);
+                  addLibraryItem(group, item);
+                }}
               />
-            </label>
+            </div>
             {group.query.trim() && matches.length > 0 ? (
-              <ul className="max-h-40 overflow-auto border border-line bg-white">
+              <ul className="max-h-40 overflow-auto rounded-[6px] border border-line bg-white">
                 {matches.slice(0, 8).map((item) => (
                   <li key={item.id}>
                     <button type="button" className="block w-full px-3 py-2 text-left text-sm hover:bg-foam" onClick={() => addLibraryItem(group, item)}>
-                      {item.name}
+                      {item.sku} · {item.name}
                       <span className="text-muted"> · {item.priceKopeks > 0 ? `+ ${formatRub(item.priceKopeks)}` : "без доплаты"}</span>
                     </button>
                   </li>
                 ))}
               </ul>
+            ) : group.query.trim() ? (
+              <p className="text-sm text-muted">В каталоге нет такого артикула или названия. Добавьте позицию кнопкой рядом с поиском.</p>
             ) : null}
-            <button type="button" className={`${secondaryClass} w-fit`} onClick={() => addNewItem(group)}>
-              Новый элемент
-            </button>
             </div>
           </div>
         );
@@ -284,6 +304,12 @@ export function KitEditor({
       </button>
     </section>
   );
+}
+
+function querySeed(query: string) {
+  const text = query.trim();
+  if (text && text.length <= 40 && !/[./\\?#%\s]/.test(text)) return { defaultSku: text.toUpperCase(), defaultName: "" };
+  return { defaultSku: "", defaultName: text };
 }
 
 function itemCount(count: number) {

@@ -21,6 +21,8 @@ export function ProductGallery({
   const [index, setIndex] = useState(0);
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"one" | "tiles">("tiles");
+  const [panning, setPanning] = useState(false);
+  const pan = useRef<{ id: number; x: number; left: number; moved: boolean } | null>(null);
   const modeRef = useRef(mode);
   const photo = images[index] ?? images[0];
 
@@ -101,6 +103,50 @@ export function ProductGallery({
     return !drag.current.moved;
   }
 
+  function desktopPointer() {
+    return window.matchMedia("(min-width: 768px)").matches;
+  }
+
+  function startPan(event: React.PointerEvent<HTMLDivElement>) {
+    if (!desktopPointer() || event.button !== 0 || images.length < 2) return;
+    const node = event.currentTarget;
+    pan.current = { id: event.pointerId, x: event.clientX, left: node.scrollLeft, moved: false };
+    setPanning(true);
+    try {
+      node.setPointerCapture(event.pointerId);
+    } catch {
+      pan.current = null;
+      setPanning(false);
+    }
+  }
+
+  function movePan(event: React.PointerEvent<HTMLDivElement>) {
+    const current = pan.current;
+    if (!current || current.id !== event.pointerId) return;
+    const dx = event.clientX - current.x;
+    if (Math.abs(dx) > 4) {
+      current.moved = true;
+      drag.current.moved = true;
+    }
+    event.currentTarget.scrollLeft = current.left - dx;
+  }
+
+  function endPan(event: React.PointerEvent<HTMLDivElement>) {
+    const current = pan.current;
+    if (!current || current.id !== event.pointerId) return;
+    pan.current = null;
+    setPanning(false);
+    const node = event.currentTarget;
+    if (!current.moved) {
+      if (node === strip.current) openViewer();
+      return;
+    }
+    const width = node.clientWidth || 1;
+    const next = Math.min(images.length - 1, Math.max(0, Math.round(node.scrollLeft / width)));
+    node.scrollTo({ left: next * node.clientWidth, behavior: "smooth" });
+    setIndex(next);
+  }
+
   function noteScroll(event: React.UIEvent<HTMLDivElement>) {
     const node = event.currentTarget;
     if (node.clientWidth === 0) return;
@@ -111,7 +157,7 @@ export function ProductGallery({
   if (!photo) {
     return (
       <div>
-        <div className={`relative -mx-3 overflow-hidden bg-foam sm:mx-0 ${attached ? "sm:rounded-b-2xl" : "sm:rounded-2xl"}`}>
+        <div className={`relative -mx-3 overflow-hidden bg-foam sm:mx-0 ${attached ? "rounded-b-[6px]" : "rounded-[6px]"}`}>
           <PhotoFrame className="aspect-[4/3] w-full" />
         </div>
         {children}
@@ -121,18 +167,22 @@ export function ProductGallery({
 
   return (
     <div>
-      <div className={`relative -mx-3 overflow-hidden bg-foam sm:mx-0 ${attached ? "sm:rounded-b-2xl" : "sm:rounded-2xl"}`}>
+      <div className={`relative -mx-3 overflow-hidden bg-foam sm:mx-0 ${attached ? "rounded-b-[6px]" : "rounded-[6px]"}`}>
         <div
           ref={strip}
-          className="flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className={`flex select-none overflow-x-auto [scrollbar-width:none] md:cursor-grab [&::-webkit-scrollbar]:hidden ${panning ? "snap-none md:cursor-grabbing" : "snap-x snap-mandatory"}`}
           onScroll={noteScroll}
+          onPointerDown={startPan}
+          onPointerMove={movePan}
+          onPointerUp={endPan}
+          onPointerCancel={endPan}
         >
           {images.map((image) => (
             <div key={image.path} className="relative min-w-full shrink-0 basis-full snap-center">
               <PhotoFrame path={image.path} className="pointer-events-none aspect-[4/3] w-full object-cover" />
               <Zone
                 label={`Открыть ${title}`}
-                className="inset-x-0"
+                className={`inset-x-0 md:cursor-grab ${panning ? "md:cursor-grabbing" : ""}`}
                 onTap={openViewer}
                 onDown={armDrag}
                 onMove={noteDrag}
@@ -158,10 +208,10 @@ export function ProductGallery({
               key={image.path}
               type="button"
               onClick={() => go(imageIndex)}
-              className={`shrink-0 rounded-md bg-foam ${imageIndex === index ? "ring-2 ring-navy" : ""}`}
+              className={`shrink-0 overflow-hidden rounded-[6px] bg-foam ${imageIndex === index ? "ring-2 ring-navy" : ""}`}
               aria-label={`Фото ${imageIndex + 1}`}
             >
-              <PhotoFrame path={image.path} className="h-16 w-16 rounded-md object-cover sm:h-20 sm:w-20" />
+              <PhotoFrame path={image.path} className="h-16 w-16 rounded-[6px] object-cover sm:h-20 sm:w-20" />
             </button>
           ))}
         </div>
@@ -210,7 +260,7 @@ export function ProductGallery({
                     key={image.path}
                     type="button"
                     onClick={() => showTile(imageIndex)}
-                    className={`overflow-hidden bg-white ${imageIndex === index ? "ring-2 ring-navy" : ""}`}
+                    className={`overflow-hidden rounded-[6px] bg-white ${imageIndex === index ? "ring-2 ring-navy" : ""}`}
                     aria-label={`Открыть фото ${imageIndex + 1}`}
                     aria-current={imageIndex === index ? "true" : undefined}
                   >
@@ -220,19 +270,31 @@ export function ProductGallery({
               </div>
             </div>
           ) : (
-            <div
-              ref={lightbox}
-              className="flex min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              onScroll={noteScroll}
-            >
-              {images.map((image) => (
-                <div
-                  key={image.path}
-                  className="flex h-full min-w-full shrink-0 basis-full snap-center items-center justify-center overflow-auto p-4 touch-auto"
-                >
-                  <PhotoFrame path={image.path} className="max-h-full max-w-full object-contain" />
-                </div>
-              ))}
+            <div className="relative min-h-0 flex-1">
+              <div
+                ref={lightbox}
+                className={`flex h-full min-h-0 select-none overflow-x-auto [scrollbar-width:none] md:cursor-grab [&::-webkit-scrollbar]:hidden ${panning ? "snap-none md:cursor-grabbing" : "snap-x snap-mandatory"}`}
+                onScroll={noteScroll}
+                onPointerDown={startPan}
+                onPointerMove={movePan}
+                onPointerUp={endPan}
+                onPointerCancel={endPan}
+              >
+                {images.map((image) => (
+                  <div
+                    key={image.path}
+                    className="flex h-full min-w-full shrink-0 basis-full snap-center items-center justify-center overflow-y-auto p-4"
+                  >
+                    <PhotoFrame path={image.path} className="pointer-events-none max-h-full max-w-full rounded-[6px] object-contain" />
+                  </div>
+                ))}
+              </div>
+              {images.length > 1 ? (
+                <>
+                  <PhotoArrow side="left" hidden={index === 0} desktopOnly onClick={() => shift(-1)} />
+                  <PhotoArrow side="right" hidden={index === images.length - 1} desktopOnly onClick={() => shift(1)} />
+                </>
+              ) : null}
             </div>
           )}
         </div>
@@ -245,13 +307,23 @@ function viewerModeClass(active: boolean) {
   return `flex h-10 w-10 items-center justify-center ${active ? "text-deep" : "text-deep/45"}`;
 }
 
-function PhotoArrow({ side, hidden, onClick }: { side: "left" | "right"; hidden: boolean; onClick: () => void }) {
+function PhotoArrow({
+  side,
+  hidden,
+  desktopOnly = false,
+  onClick,
+}: {
+  side: "left" | "right";
+  hidden: boolean;
+  desktopOnly?: boolean;
+  onClick: () => void;
+}) {
   if (hidden) return null;
   return (
     <button
       type="button"
       aria-label={side === "left" ? "Предыдущее фото" : "Следующее фото"}
-      className={`absolute top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-navy shadow ${side === "left" ? "left-3" : "right-3"}`}
+      className={`absolute top-1/2 z-10 h-10 w-10 -translate-y-1/2 items-center justify-center rounded-[6px] bg-white/90 text-navy shadow ${desktopOnly ? "hidden md:flex" : "flex"} ${side === "left" ? "left-3" : "right-3"}`}
       onClick={(event) => {
         event.stopPropagation();
         onClick();

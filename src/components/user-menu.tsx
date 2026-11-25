@@ -1,6 +1,7 @@
 "use client";
 
 import { logoutAction } from "@/actions/store";
+import { CompareNavLink } from "@/components/compare-ui";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
@@ -94,7 +95,7 @@ export function UserMenu({
           </svg>
         )}
         {cartCount > 0 ? (
-          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-moss px-1 text-[11px] font-semibold text-white">
+          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-[6px] bg-moss px-1 text-[11px] font-semibold text-white">
             {cartCount}
           </span>
         ) : null}
@@ -106,6 +107,7 @@ export function UserMenu({
           className="absolute right-0 top-full z-50 mt-2 max-h-[min(24rem,70vh)] w-60 overflow-auto rounded-2xl border border-line bg-white py-2"
         >
           <MenuLinks items={buyer} pathname={pathname} />
+          <CompareNavLink className="block px-4 py-2.5 text-sm text-ink hover:bg-paper" />
           <div className="my-1 border-t border-line" role="separator" />
           <MenuLinks items={work} pathname={pathname} />
           {loggedIn ? (

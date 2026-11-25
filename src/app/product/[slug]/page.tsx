@@ -2,9 +2,12 @@ import { notFound, redirect } from "next/navigation";
 import { CrumbTitle } from "@/components/breadcrumbs";
 import { ProductGallery } from "@/components/product-gallery";
 import { YandexPlaceMap } from "@/components/yandex-place-map";
-import { ErrorNote, HighlightSpecs, highlightSpecs, SpecGrid, specsOf, specValue } from "@/components/catalog-ui";
+import { ErrorNote, HighlightSpecs, highlightSpecs, specsOf, specValue } from "@/components/catalog-ui";
+import { CompareButton } from "@/components/compare-ui";
+import { FavoriteButton, ShareButton } from "@/components/product-actions";
+import { ProductFacts } from "@/components/product-facts";
 import { TrackView } from "@/components/track-view";
-import { KitProvider, ProductCost, ProductGroups, productSectionClass } from "@/components/product-kit";
+import { KitProvider, ProductCost, ProductGroups } from "@/components/product-kit";
 import { pageFrame } from "@/components/styles";
 import { isFavorite } from "@/lib/activity";
 import { publishedListingByPath } from "@/lib/catalog";
@@ -70,6 +73,11 @@ export default async function ProductPage({
         <div className="contents md:col-start-2 md:row-start-1 md:flex md:flex-col md:gap-6">
           <div className="order-1 md:order-none">
             <h1 className="text-xl leading-6 sm:text-2xl">{item.title}</h1>
+            <div className="mt-3 flex flex-wrap items-start gap-2">
+              <FavoriteButton listingId={item.id} slug={item.slug} saved={saved} labeled />
+              <CompareButton id={item.id} />
+              <ShareButton title={item.title} />
+            </div>
             <TrackView listingId={item.id} slug={item.slug} />
             <ErrorNote message={one("error")} />
             {item.priceKopeks <= 0 ? <p className="mt-4 text-sm">Напишите продавцу, чтобы узнать стоимость.</p> : null}
@@ -87,27 +95,14 @@ export default async function ProductPage({
                 />
               </div>
             ) : null}
-            {item.description.trim() ? (
-              <section>
-                <h2 className={productSectionClass}>Описание</h2>
-                <p className="mt-3 whitespace-pre-wrap text-sm leading-6">{item.description}</p>
-              </section>
-            ) : null}
-            {specs.length ? (
-              <section>
-                <h2 className={productSectionClass}>Характеристики</h2>
-                <div className="mt-3">
-                  <SpecGrid items={specs} />
-                </div>
-              </section>
-            ) : null}
+            {highlights.length ? <HighlightSpecs items={highlights} /> : null}
+            <ProductFacts description={item.description} specs={specs} />
             <ProductGroups />
           </div>
         </div>
         <div className="contents md:col-start-1 md:row-start-1 md:flex md:flex-col md:gap-4">
           <div className="order-2 md:order-none">
-            {highlights.length ? <HighlightSpecs items={highlights} /> : null}
-            <ProductGallery title={item.title} images={item.images} attached={highlights.length > 0} />
+            <ProductGallery title={item.title} images={item.images} />
           </div>
           <ProductCost />
         </div>

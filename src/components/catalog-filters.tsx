@@ -157,7 +157,7 @@ export function CatalogFilters({
       >
         <SettingsIcon />
         {selected > 0 ? (
-          <span className="absolute -top-1 -right-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-navy px-1 text-[10px] font-semibold text-white">
+          <span className="absolute -top-1 -right-1 inline-flex h-4 min-w-4 items-center justify-center rounded-[6px] bg-navy px-1 text-[10px] font-semibold text-white">
             {selected}
           </span>
         ) : null}
@@ -399,7 +399,7 @@ function RangeInput({
       step={step}
       value={value}
       onChange={(event) => onChange(snap(Number(event.target.value), min, step))}
-      className="pointer-events-none absolute inset-0 m-0 w-full min-w-0 max-w-full appearance-none bg-transparent [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-moss [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-moss"
+      className="pointer-events-none absolute inset-0 m-0 w-full min-w-0 max-w-full appearance-none bg-transparent [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-[6px] [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-moss [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-[6px] [&::-webkit-slider-thumb]:bg-moss"
     />
   );
 }

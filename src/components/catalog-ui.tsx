@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { CompareButton } from "@/components/compare-ui";
+import { FavoriteButton } from "@/components/product-actions";
 import { PhotoFrame } from "@/components/photo-frame";
 import { actionClass } from "@/components/styles";
 import { SpecIcon } from "@/components/spec-icon";
@@ -13,6 +15,7 @@ type SpecSource = {
 };
 
 export type CardData = {
+  id?: string;
   slug: string;
   title: string;
   priceKopeks: number;
@@ -30,6 +33,7 @@ export type CardData = {
   createdAt?: Date | string | null;
   phone?: string | null;
   configurable?: boolean;
+  saved?: boolean;
 };
 
 export function specsOf(item: { attributes: SpecSource[] }) {
@@ -73,14 +77,14 @@ export function HighlightSpecs({ items }: { items: SpecSource[] }) {
             ? "grid-cols-2"
             : "grid-cols-1";
   return (
-    <ul className={`-mx-3 grid ${columns} divide-x divide-white/15 bg-deep text-white sm:mx-0 sm:rounded-t-2xl`}>
+    <ul className={`grid ${columns} gap-2 rounded-[6px] border border-line bg-white p-3 text-deep`}>
       {items.map((spec) => {
         const text = spec.valueText?.trim() ?? "";
         const raw = text || (spec.valueNumber === null ? "" : String(spec.valueNumber));
         const unit = spec.definition.unit.trim();
         const value = unit && raw.endsWith(unit) ? raw.slice(0, -unit.length).trim() : raw;
         return (
-          <li key={spec.definition.code} className="flex min-w-0 flex-col items-center gap-1 px-1 py-3 text-center sm:px-2">
+          <li key={spec.definition.code} className="flex min-w-0 flex-col items-center gap-1 px-1 py-2 text-center sm:px-2">
             <SpecIcon icon={spec.definition.icon || ""} className="h-5 w-5 sm:h-6 sm:w-6" />
             <span className="font-display text-lg font-extrabold leading-none sm:text-xl">
               {value}
@@ -123,21 +127,29 @@ export function ProductCard({ item }: { item: CardData }) {
   const photo = item.images[0]?.path;
   const specs = highlightSpecs(item);
   return (
-    <article className="flex h-full min-w-0 flex-col bg-white">
-      <Link href={`/product/${item.slug}`} className="block">
-        <span className="relative block overflow-hidden bg-foam">
-          <PhotoFrame path={photo} className="aspect-[4/3] w-full object-cover" />
-          <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-3 pb-3 pt-10 text-white">
-            <span className="block text-xl font-bold leading-none">{formatOffer(item.priceKopeks)}</span>
-            {item.compareAtKopeks && item.compareAtKopeks > item.priceKopeks ? (
-              <span className="mt-1 block text-xs leading-none line-through opacity-80">{formatRub(item.compareAtKopeks)}</span>
+    <article className="group flex h-full min-w-0 flex-col overflow-hidden rounded-[6px] bg-white">
+      <div className="relative">
+        <Link href={`/product/${item.slug}`} className="block">
+          <span className="relative block overflow-hidden bg-foam">
+            <PhotoFrame path={photo} className="aspect-[4/3] w-full object-cover" />
+            <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-3 pb-3 pt-10 text-white">
+              <span className="block text-xl font-bold leading-none">{formatOffer(item.priceKopeks)}</span>
+              {item.compareAtKopeks && item.compareAtKopeks > item.priceKopeks ? (
+                <span className="mt-1 block text-xs leading-none line-through opacity-80">{formatRub(item.compareAtKopeks)}</span>
+              ) : null}
+            </span>
+            {item.condition === "used" ? (
+              <span className="absolute left-2 top-2 rounded-[6px] bg-black/70 px-1.5 py-0.5 text-[11px] font-medium text-white">БУ</span>
             ) : null}
           </span>
-          {item.condition === "used" ? (
-            <span className="absolute left-2 top-2 bg-black/70 px-1.5 py-0.5 text-[11px] font-medium text-white">БУ</span>
-          ) : null}
-        </span>
-      </Link>
+        </Link>
+        {item.id ? (
+          <div className="pointer-events-none absolute top-2 right-2 z-10 flex items-center opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100">
+            <FavoriteButton listingId={item.id} slug={item.slug} saved={item.saved === true} stay />
+            <CompareButton id={item.id} variant="card" />
+          </div>
+        ) : null}
+      </div>
       <span className="block flex-1 px-3 pt-3">
         <Link href={`/product/${item.slug}`} className="line-clamp-2 text-base font-semibold leading-5 text-deep">
           {item.title}
@@ -165,7 +177,7 @@ export function ProductCard({ item }: { item: CardData }) {
         <span className="block border-t border-line" />
       )}
       {item.source === "company" && item.priceKopeks > 0 ? (
-        <Link href={`/product/${item.slug}`} className={`${actionClass} w-full`} style={{ borderRadius: 0 }}>
+        <Link href={`/product/${item.slug}`} className={`${actionClass} w-full`} style={{ borderTopLeftRadius: 0, borderTopRightRadius: 0 }}>
           {item.quantity > 0 ? "Купить" : "Заказать"}
         </Link>
       ) : null}
@@ -190,6 +202,7 @@ export function listingCard(
   paths: Record<string, string> = {},
 ): CardData {
   return {
+    id: item.id,
     slug: item.slug,
     title: item.title,
     priceKopeks: item.priceKopeks,
@@ -237,7 +250,7 @@ export function ProductGrid({ items }: { items: CardData[] }) {
     return <p className="text-muted">В этой подборке пока нет товаров.</p>;
   }
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
       {items.map((item) => (
         <ProductCard key={item.slug} item={item} />
       ))}

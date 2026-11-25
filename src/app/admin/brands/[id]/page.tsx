@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { deleteBrandAction, saveBrandAction } from "@/actions/taxonomy";
 import { CrumbTitle } from "@/components/breadcrumbs";
 import { buttonClass, inputClass, secondaryClass } from "@/components/styles";
+import { brandUsage } from "@/lib/admin-mutations";
 import { requireManager } from "@/lib/guards";
 import { readQuery } from "@/lib/query";
 import { allBrands } from "@/lib/taxonomy";
@@ -19,6 +20,8 @@ export default async function BrandDetailPage({
   const { one } = await readQuery(searchParams);
   const brand = (await allBrands()).find((item) => item.id === id);
   if (!brand) notFound();
+  const usage = await brandUsage(id);
+  const canDelete = !usage.cards && usage.orders === 0;
   return (
     <main className="grid max-w-3xl gap-6">
       <CrumbTitle label={brand.name} />
@@ -38,10 +41,21 @@ export default async function BrandDetailPage({
         </label>
         <button className={`${buttonClass} w-fit`}>Сохранить</button>
       </form>
-      <form action={deleteBrandAction}>
-        <input type="hidden" name="id" value={brand.id} />
-        <button className={secondaryClass}>Удалить бренд</button>
-      </form>
+      <div className="grid gap-3">
+        <p className="text-sm text-muted">
+          {usage.cards
+            ? "У бренда есть карточки. Удаление доступно, когда карточек и заказов нет."
+            : usage.orders > 0
+              ? `У бренда есть заказы (${usage.orders}). Удаление доступно, когда карточек и заказов нет.`
+              : "Карточек и заказов нет. Бренд можно удалить."}
+        </p>
+        {canDelete ? (
+          <form action={deleteBrandAction}>
+            <input type="hidden" name="id" value={brand.id} />
+            <button className={secondaryClass}>Удалить бренд</button>
+          </form>
+        ) : null}
+      </div>
     </main>
   );
 }

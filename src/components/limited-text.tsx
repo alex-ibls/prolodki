@@ -28,9 +28,9 @@ export function LimitedText({
         className={inputClass}
       />
       <div className="mt-2 flex items-center gap-3">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-paper">
+        <div className="h-1.5 flex-1 overflow-hidden rounded-[6px] bg-paper">
           <div
-            className={`h-full rounded-full ${full ? "bg-copper" : "bg-navy"}`}
+            className={`h-full rounded-[6px] ${full ? "bg-copper" : "bg-navy"}`}
             style={{ width: `${width}%` }}
           />
         </div>

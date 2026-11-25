@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { categories, nomenclature, stockMovements } from "@/db/schema";
 import { csvRecords } from "@/lib/csv";
@@ -42,6 +42,198 @@ export async function importNomenclatureCsv(userId: string, text: string, mode: 
     }
   }
   return report;
+}
+
+const sheetFields: Record<string, string> = {
+  артикул: "sku",
+  sku: "sku",
+  название: "title",
+  title: "title",
+  категория: "category",
+  category: "category",
+  category_slug: "category_slug",
+  цена: "price",
+  price: "price",
+  склад: "quantity",
+  quantity: "quantity",
+  витрина: "published",
+  бренд: "brand",
+  brand: "brand",
+  модель: "model",
+  model: "model",
+  год: "year",
+  year: "year",
+  описание: "description",
+  description: "description",
+  "старая цена": "compare_at_price",
+  compare_at_price: "compare_at_price",
+};
+
+export async function importNomenclatureSheet(userId: string, records: Record<string, string>[]) {
+  if (records.length === 0) throw new DomainError("В файле нет строк");
+  const report: ImportReport = { applied: 0, errors: [] };
+  for (const [index, raw] of records.entries()) {
+    try {
+      await applySheetRow(userId, normalizeSheetRecord(raw));
+      report.applied += 1;
+    } catch (error) {
+      report.errors.push({
+        line: String(index + 2),
+        message: error instanceof DomainError ? error.message : "Не удалось обработать строку",
+      });
+    }
+  }
+  return report;
+}
+
+function normalizeSheetRecord(record: Record<string, string>) {
+  const next: Record<string, string> = {};
+  for (const [key, value] of Object.entries(record)) {
+    const field = sheetFields[sheetKey(key)];
+    if (!field) continue;
+    const text = value.trim() === "—" ? "" : value.trim();
+    next[field] = text;
+  }
+  return next;
+}
+
+function sheetKey(value: string) {
+  return value.trim().toLowerCase().replace(/ё/g, "е").replace(/\s+/g, " ");
+}
+
+function parseSheetPrice(raw: string) {
+  const phrase = raw.trim().toLowerCase().replace(/ё/g, "е");
+  if (phrase === "цена по запросу") return 0;
+  const cleaned = raw.replace(/[^\d,.]/g, "");
+  if (!cleaned) return null;
+  return parsePriceToKopeks(cleaned);
+}
+
+function parseYesNo(raw: string) {
+  const value = raw.trim().toLowerCase().replace(/ё/g, "е");
+  if (!value) return null;
+  if (value === "да" || value === "yes") return true;
+  if (value === "нет" || value === "no") return false;
+  throw new DomainError("Витрина указана неверно: Да или Нет");
+}
+
+async function categoryByLabel(record: Record<string, string>) {
+  const slug = record.category_slug?.trim();
+  if (slug) {
+    const category = await categoryBySlug(slug);
+    if (!category) throw new DomainError("Категория не найдена");
+    await assertLeafCategory(category.id);
+    return category;
+  }
+  const name = record.category?.trim();
+  if (!name) return null;
+  const rows = await db.select().from(categories).where(sql`lower(${categories.name}) = lower(${name})`);
+  if (rows.length === 0) throw new DomainError(`Категория «${name}» не найдена`);
+  if (rows.length > 1) throw new DomainError(`Несколько категорий с названием «${name}»`);
+  await assertLeafCategory(rows[0].id);
+  return rows[0];
+}
+
+async function applySheetRow(userId: string, record: Record<string, string>) {
+  const sku = record.sku?.trim().toUpperCase();
+  if (!sku) throw new DomainError("Нет артикула");
+  const existing = await db.query.nomenclature.findFirst({ where: eq(nomenclature.sku, sku) });
+  const priceText = record.price ?? "";
+  const price = priceText ? parseSheetPrice(priceText) : null;
+  if (priceText && price === null) throw new DomainError("Цена указана неверно");
+  const quantityText = record.quantity ?? "";
+  const quantity = quantityText ? parseIntStrict(quantityText.replace(/\s/g, "")) : null;
+  if (quantityText && quantity === null) throw new DomainError("Остаток указан неверно");
+  const published = record.published ? parseYesNo(record.published) : null;
+  const category = await categoryByLabel(record);
+  const title = record.title?.trim() ?? "";
+  const brand = record.brand ? await resolveBrandName(record.brand) : null;
+
+  if (!existing) {
+    if (!title) throw new DomainError("Нет названия");
+    if (!category) throw new DomainError("Категория не найдена");
+    if (price === null || price <= 0) throw new DomainError("Цена указана неверно");
+    if (quantity === null) throw new DomainError("Остаток указан неверно");
+    const [created] = await db
+      .insert(nomenclature)
+      .values({
+        sku,
+        categoryId: category.id,
+        title,
+        brandId: brand?.brandId ?? null,
+        brand: brand?.brand ?? "",
+        model: record.model?.trim() ?? "",
+        description: readListingDescription(record.description ?? ""),
+        priceKopeks: price,
+        quantityOnHand: quantity,
+        isPublished: published ?? false,
+        city: "",
+        updatedAt: new Date(),
+      })
+      .returning();
+    await db.insert(stockMovements).values({
+      nomenclatureId: created.id,
+      delta: quantity,
+      reason: "import",
+      note: "Загрузка Excel",
+      userId,
+    });
+    if (created.isPublished) await syncPublishedListing(db, created.id);
+    return;
+  }
+
+  if (quantity !== null && quantity < existing.quantityReserved) {
+    throw new DomainError("Остаток не покрывает резерв");
+  }
+  const patch: {
+    updatedAt?: Date;
+    title?: string;
+    categoryId?: number;
+    priceKopeks?: number;
+    quantityOnHand?: number;
+    isPublished?: boolean;
+    brandId?: number | null;
+    brand?: string;
+    model?: string;
+    year?: number | null;
+    description?: string;
+    compareAtKopeks?: number | null;
+  } = {};
+  if (title) patch.title = title;
+  if (category) patch.categoryId = category.id;
+  if (price !== null) patch.priceKopeks = price;
+  if (quantity !== null) patch.quantityOnHand = quantity;
+  if (published !== null) patch.isPublished = published;
+  if (brand) {
+    patch.brandId = brand.brandId;
+    patch.brand = brand.brand;
+  }
+  if (record.model) patch.model = record.model.trim();
+  if (record.year) {
+    const year = parseIntStrict(record.year);
+    if (year === null) throw new DomainError("Год указан неверно");
+    patch.year = year;
+  }
+  if (record.description) patch.description = readListingDescription(record.description);
+  if (record.compare_at_price) {
+    const compareAt = parseSheetPrice(record.compare_at_price);
+    if (compareAt === null) throw new DomainError("Старая цена указана неверно");
+    patch.compareAtKopeks = compareAt;
+  }
+  const delta = quantity === null ? 0 : quantity - existing.quantityOnHand;
+  if (Object.keys(patch).length === 0 && delta === 0) return;
+  patch.updatedAt = new Date();
+  await db.update(nomenclature).set(patch).where(eq(nomenclature.id, existing.id));
+  if (delta !== 0) {
+    await writeStockMovement(db, {
+      nomenclatureId: existing.id,
+      delta,
+      reason: "import",
+      note: "Загрузка Excel",
+      userId,
+    });
+  }
+  if ((published ?? existing.isPublished) || existing.isPublished) await syncPublishedListing(db, existing.id);
 }
 
 async function applyCorrection(userId: string, record: Record<string, string>) {

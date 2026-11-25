@@ -41,7 +41,7 @@ export function MobileNav({
                 <span className="relative">
                   <NavIcon name={item.icon} />
                   {item.href === "/cart" && cartCount > 0 ? (
-                    <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-moss px-1 text-[10px] font-semibold text-white">
+                    <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-[6px] bg-moss px-1 text-[10px] font-semibold text-white">
                       {cartCount}
                     </span>
                   ) : null}

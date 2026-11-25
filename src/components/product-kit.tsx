@@ -3,7 +3,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { addToCartAction, saveConfigurationAction } from "@/actions/store";
 import { TrashIcon } from "@/components/action-icons";
-import { FavoriteButton, ShareButton } from "@/components/product-actions";
 import { PhotoFrame } from "@/components/photo-frame";
 import { actionClass } from "@/components/styles";
 import { formatRub } from "@/lib/format";
@@ -171,7 +170,7 @@ export function ProductCost() {
   const kit = useKit();
   const orderLabel = kit.maxQty > 0 ? "Купить" : "Заказать";
   return (
-    <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-30 border-t border-line bg-white px-3 py-2 md:sticky md:inset-auto md:top-32 md:z-20 md:border md:p-3">
+    <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-30 border-t border-line bg-white px-3 py-2 md:sticky md:inset-auto md:top-32 md:z-20 md:rounded-[6px] md:border md:p-3">
       <div className="hidden md:block">
         <h2 className="text-base font-semibold text-deep">Расчёт стоимости</h2>
         <dl className="mt-3 divide-y divide-line border-y border-line text-sm">
@@ -226,8 +225,6 @@ export function ProductCost() {
           </form>
         ) : null}
         <div className="ml-auto flex min-w-0 flex-1 items-center gap-2 md:ml-0 md:mt-3">
-          <FavoriteButton listingId={kit.listingId} slug={kit.slug} saved={kit.saved} />
-          <ShareButton title={kit.title} />
           {kit.orderable ? (
             <button form="product-order" className={`${actionClass} min-w-0 flex-1`}>
               {orderLabel}
@@ -250,7 +247,7 @@ export function ProductGroups() {
           const expanded = kit.open[group.id] === true;
           const chosen = kit.picked[group.id]?.length ?? 0;
           return (
-            <div key={group.id} className="border border-line bg-white">
+            <div key={group.id} className="overflow-hidden rounded-[6px] border border-line bg-white">
               <button
                 type="button"
                 aria-expanded={expanded}
@@ -278,7 +275,7 @@ export function ProductGroups() {
                         type="button"
                         aria-pressed={on}
                         onClick={() => kit.toggle(group, item.id)}
-                        className={`overflow-hidden border bg-white text-left ${on ? "border-navy ring-1 ring-navy" : "border-line"}`}
+                        className={`overflow-hidden rounded-[6px] border bg-white text-left ${on ? "border-navy ring-1 ring-navy" : "border-line"}`}
                       >
                         <PhotoFrame path={item.imagePath} className="block aspect-[4/3] w-full object-contain" />
                         <span className="block px-1.5 py-1">
