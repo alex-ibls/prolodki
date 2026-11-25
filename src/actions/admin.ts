@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { customers, dealNotes, deals, listings, nomenclature, users } from "@/db/schema";
+import { customers, listings, nomenclature, users } from "@/db/schema";
 import { DomainError, isNextNavigation } from "@/lib/errors";
 import type { NomenclatureSaveState } from "@/lib/nomenclature-save";
 import { parseIntStrict, parsePriceToKopeks } from "@/lib/format";
@@ -76,60 +76,6 @@ export async function updateCustomerAction(formData: FormData) {
       })
       .where(eq(customers.id, id));
     redirect(`/admin/crm/customers/${id}?saved=1`);
-  });
-}
-
-export async function createDealAction(formData: FormData) {
-  const customerId = String(formData.get("customerId") || "");
-  await runAction(`/admin/crm/customers/${customerId}`, async (user) => {
-    if (user.staffRole !== "manager") throw new DomainError("CRM доступна менеджеру");
-    const title = String(formData.get("title") || "").trim();
-    const amount = parsePriceToKopeks(String(formData.get("amount") || "0"));
-    if (title.length < 2 || amount === null) throw new DomainError("Укажите название и сумму сделки");
-    const [deal] = await db
-      .insert(deals)
-      .values({
-        customerId,
-        title,
-        amountKopeks: amount,
-        assigneeId: user.id,
-        status: "new",
-      })
-      .returning();
-    redirect(`/admin/crm/deals/${deal.id}`);
-  });
-}
-
-export async function updateDealAction(formData: FormData) {
-  const id = String(formData.get("id") || "");
-  await runAction(`/admin/crm/deals/${id}`, async (user) => {
-    if (user.staffRole !== "manager") throw new DomainError("CRM доступна менеджеру");
-    const status = String(formData.get("status") || "");
-    const allowed = ["new", "in_progress", "invoiced", "won", "lost"];
-    if (!allowed.includes(status)) throw new DomainError("Неизвестный статус");
-    const assigneeRaw = String(formData.get("assigneeId") || "");
-    await db
-      .update(deals)
-      .set({
-        status: status as "new" | "in_progress" | "invoiced" | "won" | "lost",
-        assigneeId: assigneeRaw || null,
-        comment: String(formData.get("comment") || "").trim(),
-        title: String(formData.get("title") || "").trim(),
-        updatedAt: new Date(),
-      })
-      .where(eq(deals.id, id));
-    redirect(`/admin/crm/deals/${id}?saved=1`);
-  });
-}
-
-export async function addDealNoteAction(formData: FormData) {
-  const id = String(formData.get("id") || "");
-  await runAction(`/admin/crm/deals/${id}`, async (user) => {
-    if (user.staffRole !== "manager") throw new DomainError("CRM доступна менеджеру");
-    const body = String(formData.get("body") || "").trim();
-    if (body.length < 2) throw new DomainError("Заметка пустая");
-    await db.insert(dealNotes).values({ dealId: id, authorId: user.id, body });
-    redirect(`/admin/crm/deals/${id}`);
   });
 }
 

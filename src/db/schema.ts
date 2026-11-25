@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 import {
   boolean,
   customType,
+  date,
   doublePrecision,
   index,
   integer,
@@ -44,6 +45,13 @@ export const lineStatus = pgEnum("line_status", [
   "confirmed",
   "completed",
   "cancelled",
+  "awaiting_manufacturer",
+  "sent_to_manufacturer",
+  "awaiting_supply",
+  "at_warehouse",
+  "shipped_to_buyer",
+  "awaiting_buyer",
+  "delivered",
 ]);
 export const customerSource = pgEnum("customer_source", [
   "registration",
@@ -362,6 +370,9 @@ export const orderItems = pgTable("order_items", {
   qty: integer("qty").notNull(),
   options: text("options").notNull().default(""),
   lineStatus: lineStatus("line_status").notNull().default("placed"),
+  supply: boolean("supply").notNull().default(false),
+  settled: boolean("settled").notNull().default(false),
+  statusOn: date("status_on"),
 });
 
 export const customers = pgTable("customers", {

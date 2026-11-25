@@ -1,13 +1,10 @@
-import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
-import { createDealAction, updateCustomerAction } from "@/actions/admin";
+import { updateCustomerAction } from "@/actions/admin";
 import { CrumbTitle } from "@/components/breadcrumbs";
-import { buttonClass, inputClass, secondaryClass } from "@/components/styles";
+import { buttonClass, inputClass } from "@/components/styles";
 import { db } from "@/db";
 import { customers } from "@/db/schema";
-import { formatRub } from "@/lib/format";
-import { dealStatusLabel } from "@/lib/labels";
 import { requireManager } from "@/lib/guards";
 import { readQuery } from "@/lib/query";
 
@@ -23,7 +20,6 @@ export default async function CustomerPage({
   const { one } = await readQuery(searchParams);
   const customer = await db.query.customers.findFirst({
     where: eq(customers.id, id),
-    with: { deals: true },
   });
   if (!customer) notFound();
   return (
@@ -56,24 +52,6 @@ export default async function CustomerPage({
         </label>
         <button className={buttonClass}>Сохранить карточку</button>
       </form>
-      <section>
-        <h2 className="text-xl">Сделки</h2>
-        <ul className="mt-3 space-y-2">
-          {customer.deals.map((deal) => (
-            <li key={deal.id}>
-              <Link href={`/admin/crm/deals/${deal.id}`} className={secondaryClass}>
-                {deal.title} · {dealStatusLabel[deal.status]} · {formatRub(deal.amountKopeks)}
-              </Link>
-            </li>
-          ))}
-        </ul>
-        <form action={createDealAction} className="mt-4 grid gap-3 md:grid-cols-[1fr_160px_auto]">
-          <input type="hidden" name="customerId" value={customer.id} />
-          <input name="title" placeholder="Название сделки" className={inputClass} />
-          <input name="amount" placeholder="Сумма, ₽" className={inputClass} />
-          <button className={buttonClass}>Создать</button>
-        </form>
-      </section>
     </main>
   );
 }

@@ -1,3 +1,5 @@
+import { formatDay } from "@/lib/format";
+
 export const sourceLabel = {
   company: "Компания",
   individual: "Частное лицо",
@@ -25,11 +27,27 @@ export const listingStatusLabel = {
 } as const;
 
 export const lineStatusLabel = {
-  placed: "Размещён",
+  placed: "Создан",
+  awaiting_manufacturer: "Ожидает заказа у производителя",
+  sent_to_manufacturer: "Заказ отправлен производителю",
+  awaiting_supply: "Ожидает поставку",
+  at_warehouse: "Доставлен на склад",
+  shipped_to_buyer: "Отправлен покупателю",
+  awaiting_buyer: "Ожидает покупателя",
+  delivered: "Доставлен покупателю",
   confirmed: "Подтверждён",
-  completed: "Завершён",
   cancelled: "Отменён",
+  completed: "Завершён",
 } as const;
+
+export function lineStatusText(status: keyof typeof lineStatusLabel, statusOn: string | null) {
+  const label = lineStatusLabel[status];
+  if ((status === "awaiting_supply" || status === "awaiting_buyer") && statusOn) {
+    const day = formatDay(statusOn);
+    if (day) return `${label}, ${day}`;
+  }
+  return label;
+}
 
 export const orderStatusLabel = lineStatusLabel;
 
@@ -42,14 +60,6 @@ export const paymentLabel = {
 export const fulfillmentLabel = {
   pickup: "Самовывоз",
   delivery_agreed: "Доставка по договорённости",
-} as const;
-
-export const dealStatusLabel = {
-  new: "Новая",
-  in_progress: "В работе",
-  invoiced: "Счёт",
-  won: "Выиграна",
-  lost: "Проиграна",
 } as const;
 
 export const customerSourceLabel = {

@@ -1,53 +1,191 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
-import { db } from "@/db";
-import {
-  cartItems,
-  customers,
-  dealNotes,
-  deals,
-  listings,
-  nomenclature,
-  orderItems,
-  orders,
-  stockMovements,
-} from "@/db/schema";
+import { db, type Tx } from "@/db";
+import { cartItems, customers, listings, nomenclature, orderItems, orders, stockMovements } from "@/db/schema";
 import { DomainError } from "@/lib/errors";
-import { orderCode } from "@/lib/format";
 import type { CurrentUser } from "@/lib/session";
 import { quoteKit } from "@/lib/kit";
+import { availableOf } from "@/lib/stock";
 
-export type OrderStatus = "placed" | "confirmed" | "completed" | "cancelled";
+export const orderStatusValues = [
+  "placed",
+  "awaiting_manufacturer",
+  "sent_to_manufacturer",
+  "awaiting_supply",
+  "at_warehouse",
+  "shipped_to_buyer",
+  "awaiting_buyer",
+  "delivered",
+  "confirmed",
+  "cancelled",
+  "completed",
+] as const;
+
+export type OrderStatus = (typeof orderStatusValues)[number];
+export type Fulfillment = "pickup" | "delivery_agreed";
+export type StatusDateKind = "supply" | "pickup";
+
+export type ManagerAction = {
+  next: OrderStatus;
+  label: string;
+  date: StatusDateKind | null;
+};
+
+const statusRank: Record<OrderStatus, number> = {
+  placed: 0,
+  awaiting_manufacturer: 1,
+  sent_to_manufacturer: 2,
+  awaiting_supply: 3,
+  at_warehouse: 4,
+  awaiting_buyer: 5,
+  shipped_to_buyer: 6,
+  delivered: 7,
+  confirmed: 8,
+  completed: 9,
+  cancelled: 100,
+};
 
 export function deriveOrderStatus(lines: { lineStatus: OrderStatus }[]): OrderStatus {
   if (lines.length === 0) return "cancelled";
-  if (lines.every((line) => line.lineStatus === "cancelled")) return "cancelled";
   const live = lines.filter((line) => line.lineStatus !== "cancelled");
-  if (live.every((line) => line.lineStatus === "completed")) return "completed";
-  if (live.every((line) => line.lineStatus === "confirmed" || line.lineStatus === "completed")) {
-    return "confirmed";
-  }
-  return "placed";
+  if (live.length === 0) return "cancelled";
+  return live.reduce((earliest, line) =>
+    statusRank[line.lineStatus] < statusRank[earliest.lineStatus] ? line : earliest,
+  ).lineStatus;
 }
 
-async function syncDeal(orderId: string, status: OrderStatus, authorId: string | null) {
-  const deal = await db.query.deals.findFirst({ where: eq(deals.orderId, orderId) });
-  if (!deal) return;
-  if (status === "cancelled" && deal.status !== "lost") {
-    await db.update(deals).set({ status: "lost", updatedAt: new Date() }).where(eq(deals.id, deal.id));
-    await db.insert(dealNotes).values({
-      dealId: deal.id,
-      authorId,
-      body: "Заказ отменён",
-    });
+export function supplyPath(fulfillment: Fulfillment): OrderStatus[] {
+  const head: OrderStatus[] = [
+    "placed",
+    "awaiting_manufacturer",
+    "sent_to_manufacturer",
+    "awaiting_supply",
+    "at_warehouse",
+  ];
+  if (fulfillment === "delivery_agreed") return [...head, "shipped_to_buyer"];
+  return [...head, "awaiting_buyer", "delivered"];
+}
+
+export function managerActions(
+  line: { lineStatus: OrderStatus; supply: boolean; settled: boolean },
+  fulfillment: Fulfillment,
+): ManagerAction[] {
+  const cancel: ManagerAction = { next: "cancelled", label: "Отменить", date: null };
+  if (!line.supply) {
+    if (line.lineStatus === "placed") {
+      return [
+        { next: "confirmed", label: "Подтвердить", date: null },
+        cancel,
+      ];
+    }
+    if (line.lineStatus === "confirmed" && !line.settled) {
+      return [{ next: "completed", label: "Списать остаток", date: null }];
+    }
+    return [];
   }
-  if (status === "completed" && deal.status !== "won") {
-    await db.update(deals).set({ status: "won", updatedAt: new Date() }).where(eq(deals.id, deal.id));
-    await db.insert(dealNotes).values({
-      dealId: deal.id,
-      authorId,
-      body: "Заказ завершён",
-    });
+
+  const forward: Partial<Record<OrderStatus, ManagerAction>> = {
+    placed: { next: "awaiting_manufacturer", label: "Ожидает заказа у производителя", date: null },
+    awaiting_manufacturer: { next: "sent_to_manufacturer", label: "Заказ отправлен производителю", date: null },
+    sent_to_manufacturer: { next: "awaiting_supply", label: "Ожидает поставку", date: "supply" },
+    awaiting_supply: { next: "at_warehouse", label: "Доставлен на склад", date: null },
+    at_warehouse:
+      fulfillment === "delivery_agreed"
+        ? { next: "shipped_to_buyer", label: "Отправлен покупателю", date: null }
+        : { next: "awaiting_buyer", label: "Ожидает покупателя", date: "pickup" },
+    awaiting_buyer: { next: "delivered", label: "Доставлен покупателю", date: null },
+  };
+  const step = forward[line.lineStatus];
+  if (!step) return [];
+  return [step, cancel];
+}
+
+function parseStatusDate(raw: string) {
+  const value = raw.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new DomainError("Укажите дату");
+  const year = Number(value.slice(0, 4));
+  const month = Number(value.slice(5, 7));
+  const day = Number(value.slice(8, 10));
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+    throw new DomainError("Укажите дату");
   }
+  return value;
+}
+
+type StockLine = {
+  qty: number;
+  listingId: string | null;
+  nomenclatureId: string | null;
+  lineStatus: string;
+  supply: boolean;
+};
+
+async function releaseReserve(tx: Tx, line: StockLine, userId: string | null) {
+  if (line.supply || line.lineStatus !== "placed" || !line.listingId) return;
+  const [listing] = await tx.select().from(listings).where(eq(listings.id, line.listingId)).for("update");
+  if (!listing) return;
+
+  if (line.nomenclatureId) {
+    const [nom] = await tx
+      .select()
+      .from(nomenclature)
+      .where(eq(nomenclature.id, line.nomenclatureId))
+      .for("update");
+    if (!nom) return;
+    const reserved = Math.max(0, nom.quantityReserved - line.qty);
+    await tx
+      .update(nomenclature)
+      .set({ quantityReserved: reserved, updatedAt: new Date() })
+      .where(eq(nomenclature.id, nom.id));
+    await tx
+      .update(listings)
+      .set({ quantity: nom.quantityOnHand - reserved, updatedAt: new Date() })
+      .where(eq(listings.id, listing.id));
+    await tx.insert(stockMovements).values({
+      nomenclatureId: nom.id,
+      delta: 0,
+      reason: "cancel",
+      note: `Снят резерв ${line.qty}`,
+      userId,
+    });
+    return;
+  }
+
+  if (listing.status === "reserved") {
+    await tx
+      .update(listings)
+      .set({ status: "published", quantity: 1, updatedAt: new Date() })
+      .where(eq(listings.id, listing.id));
+  }
+}
+
+async function writeOff(tx: Tx, line: StockLine, userId: string | null) {
+  if (line.supply || !line.nomenclatureId) return;
+  const [nom] = await tx
+    .select()
+    .from(nomenclature)
+    .where(eq(nomenclature.id, line.nomenclatureId))
+    .for("update");
+  if (!nom) return;
+  const onHand = nom.quantityOnHand - line.qty;
+  const reserved = Math.max(0, nom.quantityReserved - line.qty);
+  await tx
+    .update(nomenclature)
+    .set({ quantityOnHand: onHand, quantityReserved: reserved, updatedAt: new Date() })
+    .where(eq(nomenclature.id, nom.id));
+  if (line.listingId) {
+    await tx
+      .update(listings)
+      .set({ quantity: onHand - reserved, updatedAt: new Date() })
+      .where(eq(listings.id, line.listingId));
+  }
+  await tx.insert(stockMovements).values({
+    nomenclatureId: nom.id,
+    delta: -line.qty,
+    reason: "complete",
+    note: `Списание ${line.qty}`,
+    userId,
+  });
 }
 
 export async function placeOrder(
@@ -56,7 +194,7 @@ export async function placeOrder(
   cartId: string,
   input: {
     paymentMethod: "invoice" | "cash" | "agreement";
-    fulfillment: "pickup" | "delivery_agreed";
+    fulfillment: Fulfillment;
     contactName: string;
     phone: string;
     city: string;
@@ -109,12 +247,15 @@ export async function placeOrder(
       })
       .returning();
 
-    let amount = 0;
     for (const item of items) {
       const listing = listingById.get(item.listingId)!;
       const picked = await quoteKit(listing.nomenclatureId, item.options);
       const unit = listing.priceKopeks + picked.extraKopeks;
-      amount += unit * item.qty;
+      let supply = false;
+      if (listing.nomenclatureId) {
+        const nom = nomById.get(listing.nomenclatureId)!;
+        supply = listing.onOrder || availableOf(nom) <= 0;
+      }
       await tx.insert(orderItems).values({
         orderId: order.id,
         listingId: listing.id,
@@ -125,7 +266,10 @@ export async function placeOrder(
         priceKopeks: unit,
         qty: item.qty,
         options: picked.ids.join(","),
+        supply,
       });
+
+      if (supply) continue;
 
       if (listing.nomenclatureId) {
         const nom = nomById.get(listing.nomenclatureId)!;
@@ -163,113 +307,40 @@ export async function placeOrder(
           .from(customers)
           .where(and(eq(customers.phone, input.phone), isNull(customers.userId)))
           .limit(1);
-    let customerId = customer?.id;
-    if (!customerId) {
-      const [created] = await tx
-        .insert(customers)
-        .values({
-          userId: buyer?.id,
-          name: input.contactName,
-          phone: input.phone,
-          email: buyer?.email ?? "",
-          city: input.city,
-          source: "order",
-        })
-        .returning();
-      customerId = created.id;
+    if (!customer) {
+      await tx.insert(customers).values({
+        userId: buyer?.id,
+        name: input.contactName,
+        phone: input.phone,
+        email: buyer?.email ?? "",
+        city: input.city,
+        source: "order",
+      });
     }
-    await tx.insert(deals).values({
-      customerId,
-      orderId: order.id,
-      title: `Заказ ${orderCode(order.orderNo)}`,
-      amountKopeks: amount,
-      status: "new",
-    });
     return order.id;
   });
 
   return orderId;
 }
 
-async function releaseLine(
-  line: {
-    id: string;
-    qty: number;
-    listingId: string | null;
-    nomenclatureId: string | null;
-    lineStatus: string;
-  },
+async function cancelLines(
+  orderId: string,
+  lines: (StockLine & { id: string })[],
   userId: string | null,
-  reason: "cancel" | "complete",
 ) {
-  if (!line.listingId) return;
-  const [listing] = await db.select().from(listings).where(eq(listings.id, line.listingId)).for("update");
-  if (!listing) return;
-
-  if (reason === "cancel" && line.lineStatus === "placed") {
-    if (line.nomenclatureId) {
-      const [nom] = await db
-        .select()
-        .from(nomenclature)
-        .where(eq(nomenclature.id, line.nomenclatureId))
-        .for("update");
-      if (!nom) return;
-      const reserved = Math.max(0, nom.quantityReserved - line.qty);
-      await db
-        .update(nomenclature)
-        .set({ quantityReserved: reserved, updatedAt: new Date() })
-        .where(eq(nomenclature.id, nom.id));
-      await db
-        .update(listings)
-        .set({ quantity: nom.quantityOnHand - reserved, updatedAt: new Date() })
-        .where(eq(listings.id, listing.id));
-      await db.insert(stockMovements).values({
-        nomenclatureId: nom.id,
-        delta: 0,
-        reason: "cancel",
-        note: `Снят резерв ${line.qty}`,
-        userId,
-      });
-    } else if (listing.status === "reserved") {
-      await db
-        .update(listings)
-        .set({ status: "published", quantity: 1, updatedAt: new Date() })
-        .where(eq(listings.id, listing.id));
+  if (lines.some((line) => line.lineStatus !== "placed")) {
+    throw new DomainError("Отменить можно только заказ, который ещё не подтверждён");
+  }
+  await db.transaction(async (tx) => {
+    for (const line of lines) {
+      const [locked] = await tx.select().from(orderItems).where(eq(orderItems.id, line.id)).for("update");
+      if (!locked || locked.orderId !== orderId || locked.lineStatus !== "placed") {
+        throw new DomainError("Статус заказа уже изменился");
+      }
+      await releaseReserve(tx, locked, userId);
+      await tx.update(orderItems).set({ lineStatus: "cancelled", statusOn: null }).where(eq(orderItems.id, line.id));
     }
-  }
-
-  if (reason === "complete" && line.nomenclatureId) {
-    const [nom] = await db
-      .select()
-      .from(nomenclature)
-      .where(eq(nomenclature.id, line.nomenclatureId))
-      .for("update");
-    if (!nom) return;
-    const onHand = nom.quantityOnHand - line.qty;
-    const reserved = Math.max(0, nom.quantityReserved - line.qty);
-    await db
-      .update(nomenclature)
-      .set({ quantityOnHand: onHand, quantityReserved: reserved, updatedAt: new Date() })
-      .where(eq(nomenclature.id, nom.id));
-    await db
-      .update(listings)
-      .set({ quantity: onHand - reserved, updatedAt: new Date() })
-      .where(eq(listings.id, listing.id));
-    await db.insert(stockMovements).values({
-      nomenclatureId: nom.id,
-      delta: -line.qty,
-      reason: "complete",
-      note: `Списание ${line.qty}`,
-      userId,
-    });
-  }
-
-  if (reason === "complete" && listing.source === "individual") {
-    await db
-      .update(listings)
-      .set({ status: "archived", updatedAt: new Date() })
-      .where(eq(listings.id, listing.id));
-  }
+  });
 }
 
 export async function cancelOrder(user: CurrentUser, orderId: string) {
@@ -278,21 +349,7 @@ export async function cancelOrder(user: CurrentUser, orderId: string) {
     with: { items: true },
   });
   if (!order || order.buyerId !== user.id) throw new DomainError("Заказ не найден");
-  if (deriveOrderStatus(order.items) !== "placed") {
-    throw new DomainError("Отменить можно только заказ, который ещё не подтверждён");
-  }
-  await db.transaction(async (tx) => {
-    for (const line of order.items) {
-      await tx
-        .update(orderItems)
-        .set({ lineStatus: "cancelled" })
-        .where(eq(orderItems.id, line.id));
-    }
-  });
-  for (const line of order.items) {
-    await releaseLine(line, user.id, "cancel");
-  }
-  await syncDeal(orderId, "cancelled", user.id);
+  await cancelLines(order.id, order.items, user.id);
 }
 
 export async function cancelGuestOrder(guestToken: string, orderId: string) {
@@ -301,18 +358,7 @@ export async function cancelGuestOrder(guestToken: string, orderId: string) {
     with: { items: true },
   });
   if (!order || order.buyerId || order.guestToken !== guestToken) throw new DomainError("Заказ не найден");
-  if (deriveOrderStatus(order.items) !== "placed") {
-    throw new DomainError("Отменить можно только заказ, который ещё не подтверждён");
-  }
-  await db.transaction(async (tx) => {
-    for (const line of order.items) {
-      await tx.update(orderItems).set({ lineStatus: "cancelled" }).where(eq(orderItems.id, line.id));
-    }
-  });
-  for (const line of order.items) {
-    await releaseLine(line, null, "cancel");
-  }
-  await syncDeal(orderId, "cancelled", null);
+  await cancelLines(order.id, order.items, null);
 }
 
 export function canManageLine(
@@ -327,29 +373,39 @@ export function canManageLine(
 export async function transitionLine(
   user: CurrentUser,
   itemId: string,
-  next: "confirmed" | "completed" | "cancelled",
+  next: OrderStatus,
+  statusOnRaw: string,
 ) {
   const line = await db.query.orderItems.findFirst({
     where: eq(orderItems.id, itemId),
-    with: { order: { with: { items: true } } },
+    with: { order: true },
   });
-  if (!line || !canManageLine(user, line)) throw new DomainError("Нет доступа к строке заказа");
-  if (next === "confirmed" && line.lineStatus !== "placed") {
-    throw new DomainError("Подтвердить можно только новую строку");
+  if (!line?.order || !canManageLine(user, line)) throw new DomainError("Нет доступа к строке заказа");
+  const action = managerActions(line, line.order.fulfillment).find((item) => item.next === next);
+  if (!action) {
+    if (line.supply && next === "confirmed") {
+      throw new DomainError("У позиции нет остатка: проведите её по статусам поставки");
+    }
+    throw new DomainError("Этот статус сейчас недоступен");
   }
-  if (next === "completed" && line.lineStatus !== "confirmed") {
-    throw new DomainError("Сначала подтвердите строку");
-  }
-  if (next === "cancelled" && line.lineStatus !== "placed") {
-    throw new DomainError("Отменить можно только новую строку");
-  }
+  const statusOn = action.date ? parseStatusDate(statusOnRaw) : null;
 
-  await db.update(orderItems).set({ lineStatus: next }).where(eq(orderItems.id, line.id));
-  if (next === "cancelled") await releaseLine(line, user.id, "cancel");
-  if (next === "completed") await releaseLine(line, user.id, "complete");
-
-  const fresh = await db.select().from(orderItems).where(eq(orderItems.orderId, line.orderId));
-  await syncDeal(line.orderId, deriveOrderStatus(fresh), user.id);
+  await db.transaction(async (tx) => {
+    const [locked] = await tx.select().from(orderItems).where(eq(orderItems.id, line.id)).for("update");
+    if (!locked || locked.lineStatus !== line.lineStatus) {
+      throw new DomainError("Статус заказа уже изменился");
+    }
+    if (next === "confirmed" || next === "completed") await writeOff(tx, locked, user.id);
+    if (next === "cancelled") await releaseReserve(tx, locked, user.id);
+    await tx
+      .update(orderItems)
+      .set({
+        lineStatus: next,
+        statusOn,
+        settled: next === "confirmed" || next === "completed" ? true : locked.settled,
+      })
+      .where(eq(orderItems.id, line.id));
+  });
 }
 
 export async function getOrderBundle(orderId: string) {

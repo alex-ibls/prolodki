@@ -20,7 +20,6 @@ const labels: Record<string, string> = {
   nomenclature: "Номенклатура",
   import: "Загрузка",
   moderation: "Модерация",
-  deals: "Сделки",
   compare: "Сравнение",
   kit: "Комплектации",
 };
@@ -54,7 +53,6 @@ export function crumbsForPath(pathname: string, names: Record<string, string> = 
     href += `/${segment}`;
     if (segment === "admin") continue;
     if (segment === "crm") {
-      if (segments[index + 1] === "deals") continue;
       crumbs.push({ href: "/admin/crm", label: "Клиенты" });
       continue;
     }
@@ -95,7 +93,6 @@ function segmentLabel(segment: string, parent: string | undefined, root: string)
     if (parent === "nomenclature") return "Позиция";
     if (parent === "kit") return "Позиция";
     if (parent === "customers") return "Клиент";
-    if (parent === "deals") return "Сделка";
     if (parent === "moderation") return "Товар";
     return "Страница";
   }

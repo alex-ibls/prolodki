@@ -3,7 +3,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { customers, deals, listings, nomenclature, orderItems } from "@/db/schema";
+import { customers, dealNotes, deals, listings, nomenclature, orderItems } from "@/db/schema";
 import { removeBrand, removeCategory } from "@/lib/admin-mutations";
 import { allCategories } from "@/lib/catalog";
 import { DomainError } from "@/lib/errors";
@@ -13,8 +13,7 @@ import { companyOrg, syncPublishedListing } from "@/lib/stock";
 import { archiveNomenclature, deleteNomenclature, purgeNomenclature, restoreNomenclature } from "@/lib/nomenclature";
 import { categoryChain } from "@/lib/taxonomy";
 
-const dealStatuses = ["new", "in_progress", "invoiced", "won", "lost"] as const;
-const lineStatuses = ["confirmed", "completed", "cancelled"] as const;
+const lineStatuses = ["confirmed", "cancelled"] as const;
 
 function readIds(formData: FormData) {
   const ids = [...new Set(formData.getAll("id").map(String).map((item) => item.trim()).filter(Boolean))];
@@ -54,24 +53,13 @@ export async function bulkCustomersAction(formData: FormData) {
     if (user.staffRole !== "manager") throw new DomainError("CRM доступна менеджеру");
     if (formData.get("op") !== "delete") throw new DomainError("Неизвестное действие");
     const ids = readIds(formData);
-    const linked = await db.select({ customerId: deals.customerId }).from(deals).where(inArray(deals.customerId, ids));
-    if (linked.length > 0) throw new DomainError("Сначала уберите сделки выбранных клиентов");
+    const linked = await db.select({ id: deals.id }).from(deals).where(inArray(deals.customerId, ids));
+    const dealIds = linked.map((row) => row.id);
+    if (dealIds.length > 0) {
+      await db.delete(dealNotes).where(inArray(dealNotes.dealId, dealIds));
+      await db.delete(deals).where(inArray(deals.id, dealIds));
+    }
     await db.delete(customers).where(inArray(customers.id, ids));
-    redirect(withSaved(back));
-  });
-}
-
-export async function bulkDealsAction(formData: FormData) {
-  const back = cleanBack(formData.get("back"), "/admin/crm/deals");
-  await runAction(back, async (user) => {
-    if (user.staffRole !== "manager") throw new DomainError("CRM доступна менеджеру");
-    const status = String(formData.get("op") || "");
-    if (!(dealStatuses as readonly string[]).includes(status)) throw new DomainError("Неизвестный статус");
-    const ids = readIds(formData);
-    await db
-      .update(deals)
-      .set({ status: status as (typeof dealStatuses)[number], updatedAt: new Date() })
-      .where(inArray(deals.id, ids));
     redirect(withSaved(back));
   });
 }
@@ -145,7 +133,7 @@ export async function bulkOrdersAction(formData: FormData) {
     let reason = "Нет строк в подходящем статусе";
     for (const line of lines) {
       try {
-        await transitionLine(user, line.id, next);
+        await transitionLine(user, line.id, next, "");
         changed += 1;
       } catch (error) {
         if (error instanceof DomainError) reason = error.message;

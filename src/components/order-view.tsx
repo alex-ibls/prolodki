@@ -1,9 +1,9 @@
 import { cancelOrderAction, transitionLineAction } from "@/actions/store";
 import { CrumbTitle } from "@/components/breadcrumbs";
-import { secondaryClass } from "@/components/styles";
+import { buttonClass, secondaryClass } from "@/components/styles";
 import { formatRub, orderCode } from "@/lib/format";
-import { fulfillmentLabel, lineStatusLabel, orderStatusLabel, paymentLabel } from "@/lib/labels";
-import { canManageLine, deriveOrderStatus } from "@/lib/orders";
+import { fulfillmentLabel, lineStatusLabel, lineStatusText, orderStatusLabel, paymentLabel } from "@/lib/labels";
+import { canManageLine, deriveOrderStatus, managerActions, supplyPath, type OrderStatus } from "@/lib/orders";
 import type { CurrentUser } from "@/lib/session";
 
 type Line = {
@@ -11,7 +11,10 @@ type Line = {
   title: string;
   qty: number;
   priceKopeks: number;
-  lineStatus: "placed" | "confirmed" | "completed" | "cancelled";
+  lineStatus: OrderStatus;
+  supply: boolean;
+  settled: boolean;
+  statusOn: string | null;
   sellerUserId: string | null;
   organizationId: string | null;
 };
@@ -43,6 +46,7 @@ export function OrderView({
 }) {
   const lines = isBuyer || !user ? order.items : order.items.filter((line) => canManageLine(user, line));
   const status = deriveOrderStatus(lines);
+  const buyerCanCancel = isBuyer && lines.length > 0 && lines.every((line) => line.lineStatus === "placed");
   return (
     <article className="rounded-3xl border border-line bg-card p-4">
       <CrumbTitle label={`Заказ ${orderCode(order.orderNo)}`} />
@@ -53,7 +57,7 @@ export function OrderView({
             {orderStatusLabel[status]} · {paymentLabel[order.paymentMethod]} · {fulfillmentLabel[order.fulfillment]}
           </p>
         </div>
-        {isBuyer && status === "placed" ? (
+        {buyerCanCancel ? (
           <form action={cancelOrderAction}>
             <input type="hidden" name="orderId" value={order.id} />
             <button className={secondaryClass}>Отменить заказ</button>
@@ -66,54 +70,50 @@ export function OrderView({
       </p>
       {order.comment ? <p className="mt-2 text-sm text-muted">{order.comment}</p> : null}
       <ul className="mt-4 divide-y divide-line">
-        {lines.map((line) => (
-          <li key={line.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-            <div>
-              <p>{line.title}</p>
-              <p className="text-sm text-muted">
-                {line.qty} × {formatRub(line.priceKopeks)} · {lineStatusLabel[line.lineStatus]}
-              </p>
-            </div>
-            {user && canManageLine(user, line) ? (
-              <div className="flex gap-2">
-                {line.lineStatus === "placed" ? (
-                  <>
-                    <LineButton itemId={line.id} orderId={order.id} next="confirmed" back={back} label="Подтвердить" />
-                    <LineButton itemId={line.id} orderId={order.id} next="cancelled" back={back} label="Отменить" />
-                  </>
-                ) : null}
-                {line.lineStatus === "confirmed" ? (
-                  <LineButton itemId={line.id} orderId={order.id} next="completed" back={back} label="Завершить" />
-                ) : null}
+        {lines.map((line) => {
+          const actions = user && canManageLine(user, line) ? managerActions(line, order.fulfillment) : [];
+          const path = line.supply && line.lineStatus !== "cancelled" ? supplyPath(order.fulfillment) : [];
+          return (
+            <li key={line.id} className="grid gap-3 py-3">
+              <div>
+                <p>{line.title}</p>
+                <p className="text-sm text-muted">
+                  {line.qty} × {formatRub(line.priceKopeks)} · {lineStatusText(line.lineStatus, line.statusOn)}
+                </p>
+                {line.supply ? <p className="text-sm text-muted">Нет в наличии, остаток не меняется</p> : null}
               </div>
-            ) : null}
-          </li>
-        ))}
+              {path.length > 0 ? (
+                <ol className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                  {path.map((step) => (
+                    <li key={step} className={step === line.lineStatus ? "font-semibold text-deep" : "text-muted"}>
+                      {lineStatusLabel[step]}
+                    </li>
+                  ))}
+                </ol>
+              ) : null}
+              {actions.length > 0 ? (
+                <div className="flex flex-wrap items-end gap-2">
+                  {actions.map((action) => (
+                    <form key={action.next} action={transitionLineAction} className="flex flex-wrap items-end gap-2">
+                      <input type="hidden" name="itemId" value={line.id} />
+                      <input type="hidden" name="orderId" value={order.id} />
+                      <input type="hidden" name="next" value={action.next} />
+                      <input type="hidden" name="back" value={back} />
+                      {action.date ? (
+                        <label className="grid text-xs text-muted">
+                          {action.date === "supply" ? "Дата поставки" : "Дата"}
+                          <input type="date" name="statusOn" required className="border border-line bg-white px-3 py-2 text-sm text-ink" />
+                        </label>
+                      ) : null}
+                      <button className={action.next === "cancelled" ? secondaryClass : buttonClass}>{action.label}</button>
+                    </form>
+                  ))}
+                </div>
+              ) : null}
+            </li>
+          );
+        })}
       </ul>
     </article>
-  );
-}
-
-function LineButton({
-  itemId,
-  orderId,
-  next,
-  back,
-  label,
-}: {
-  itemId: string;
-  orderId: string;
-  next: string;
-  back: string;
-  label: string;
-}) {
-  return (
-    <form action={transitionLineAction}>
-      <input type="hidden" name="itemId" value={itemId} />
-      <input type="hidden" name="orderId" value={orderId} />
-      <input type="hidden" name="next" value={next} />
-      <input type="hidden" name="back" value={back} />
-      <button className={secondaryClass}>{label}</button>
-    </form>
   );
 }

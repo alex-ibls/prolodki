@@ -15,7 +15,7 @@ import { readGuestToken } from "@/lib/guest";
 import { runAction } from "@/lib/guards";
 import { saveSellerListing } from "@/lib/listings";
 import { sendConfirmEmail } from "@/lib/mail";
-import { cancelGuestOrder, cancelOrder, placeOrder, transitionLine } from "@/lib/orders";
+import { cancelGuestOrder, cancelOrder, orderStatusValues, placeOrder, transitionLine, type OrderStatus } from "@/lib/orders";
 import { getCurrentUser } from "@/lib/session";
 
 function safeNext(value: FormDataEntryValue | null) {
@@ -270,10 +270,10 @@ export async function transitionLineAction(formData: FormData) {
   const next = String(formData.get("next") || "");
   const back = String(formData.get("back") || `/account/orders/${orderId}`);
   await runAction(back, async (user) => {
-    if (next !== "confirmed" && next !== "completed" && next !== "cancelled") {
+    if (!(orderStatusValues as readonly string[]).includes(next)) {
       throw new DomainError("Неизвестное действие");
     }
-    await transitionLine(user, itemId, next);
+    await transitionLine(user, itemId, next as OrderStatus, String(formData.get("statusOn") || ""));
     redirect(back);
   });
 }

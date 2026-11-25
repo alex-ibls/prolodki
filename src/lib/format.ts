@@ -33,6 +33,13 @@ export function formatCardWhen(value: Date | string) {
   return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short" }).format(date).replace(".", "");
 }
 
+export function formatDay(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  if (!match) return "";
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", year: "numeric" }).format(date);
+}
+
 export function formatDate(value: Date) {
   return new Intl.DateTimeFormat("ru-RU", {
     dateStyle: "medium",

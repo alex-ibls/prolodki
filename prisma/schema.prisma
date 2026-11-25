@@ -288,6 +288,9 @@ model order_items {
   qty             Int
   line_status     line_status    @default(placed)
   options         String         @default("")
+  supply          Boolean        @default(false)
+  settled         Boolean        @default(false)
+  status_on       DateTime?      @db.Date
   listings        listings?      @relation(fields: [listing_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "order_items_listing_id_listings_id_fk")
   nomenclature    nomenclature?  @relation(fields: [nomenclature_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "order_items_nomenclature_id_nomenclature_id_fk")
   orders          orders         @relation(fields: [order_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "order_items_order_id_orders_id_fk")
@@ -430,6 +433,13 @@ enum line_status {
   confirmed
   completed
   cancelled
+  awaiting_manufacturer
+  sent_to_manufacturer
+  awaiting_supply
+  at_warehouse
+  shipped_to_buyer
+  awaiting_buyer
+  delivered
 }
 
 enum listing_event_kind {

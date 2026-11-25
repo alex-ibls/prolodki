@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { eq, like } from "drizzle-orm";
 import { client, db } from "./index";
-import { brands, categories, customers, deals, listings, orderItems, orders, users } from "./schema";
+import { brands, categories, customers, listings, orderItems, orders, users } from "./schema";
 import { companyOrg } from "../lib/stock";
 
 const batch = 24;
@@ -10,7 +10,6 @@ const firstNames = ["Иван", "Мария", "Сергей", "Ольга", "П�
 const lastNames = ["Орлов", "Соколова", "Белов", "Крылова", "Морозов", "Волкова", "Лебедев", "Павлова"];
 const cities = ["Химки", "Клин", "Москва", "Зеленоград", "Долгопрудный", "Мытищи"];
 const sources = ["manual", "order", "registration"] as const;
-const dealStatuses = ["new", "in_progress", "invoiced", "won", "lost"] as const;
 const lineStatuses = ["placed", "confirmed", "completed", "cancelled"] as const;
 const payments = ["invoice", "cash", "agreement"] as const;
 const fulfillments = ["pickup", "delivery_agreed"] as const;
@@ -25,7 +24,6 @@ function person(index: number) {
 }
 
 async function main() {
-  const manager = await db.query.users.findFirst({ where: eq(users.email, "manager@prolodki.test") });
   const seller = await db.query.users.findFirst({ where: eq(users.email, "private@prolodki.test") });
   if (!seller) throw new Error("Нет частного продавца private@prolodki.test");
   const leaf = await db.query.categories.findFirst({ where: eq(categories.slug, "pp") });
@@ -54,23 +52,6 @@ async function main() {
       })
       .returning({ id: customers.id });
     customerIds.push(created.id);
-  }
-
-  for (let index = 1; index <= batch; index += 1) {
-    const title = `Демо-сделка ${String(index).padStart(2, "0")}`;
-    const existing = await db.query.deals.findFirst({ where: eq(deals.title, title) });
-    if (existing) continue;
-    const createdAt = daysAgo(batch - index);
-    await db.insert(deals).values({
-      customerId: customerIds[(index - 1) % customerIds.length],
-      assigneeId: manager?.id ?? null,
-      title,
-      amountKopeks: (250_000 + index * 15_000) * 100,
-      status: dealStatuses[index % dealStatuses.length],
-      comment: "Демо-сделка для списка",
-      createdAt,
-      updatedAt: createdAt,
-    });
   }
 
   const demoOrders = await db.select({ id: orders.id }).from(orders).where(like(orders.comment, "demo-admin-%"));

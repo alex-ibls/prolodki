@@ -37,7 +37,6 @@ export default async function CompanyOrdersPage({
         ]}
         bulk={[
           { value: "confirmed", label: "Подтвердить" },
-          { value: "completed", label: "Завершить" },
           { value: "cancelled", label: "Отменить" },
         ]}
         bulkAction={bulkOrdersAction}

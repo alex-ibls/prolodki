@@ -1,6 +1,6 @@
-import { asc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, asc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { kitItems, nomenclatureKitGroups, nomenclatureKitLinks } from "@/db/schema";
+import { kitItems, nomenclature, nomenclatureKitGroups, nomenclatureKitLinks } from "@/db/schema";
 import { DomainError } from "@/lib/errors";
 import { deleteStored, savePhoto } from "@/lib/uploads";
 
@@ -32,11 +32,18 @@ export async function listKitLibrary(query = "") {
   return db.select().from(kitItems).where(where).orderBy(asc(kitItems.kind), asc(kitItems.sku), asc(kitItems.name));
 }
 
-export async function kitUsageCounts() {
-  const rows = await db
+function liveKitLinks(itemId?: string) {
+  return db
     .select({ itemId: nomenclatureKitLinks.itemId, n: sql<number>`count(*)::int` })
     .from(nomenclatureKitLinks)
+    .innerJoin(nomenclatureKitGroups, eq(nomenclatureKitLinks.groupId, nomenclatureKitGroups.id))
+    .innerJoin(nomenclature, eq(nomenclatureKitGroups.nomenclatureId, nomenclature.id))
+    .where(and(isNull(nomenclature.deletedAt), itemId ? eq(nomenclatureKitLinks.itemId, itemId) : undefined))
     .groupBy(nomenclatureKitLinks.itemId);
+}
+
+export async function kitUsageCounts() {
+  const rows = await liveKitLinks();
   return new Map(rows.map((row) => [row.itemId, Number(row.n)]));
 }
 
@@ -93,15 +100,13 @@ export async function deleteKitCatalogItem(id: string) {
   if (!item) throw new DomainError("Элемент не найден");
   const used = await kitLinkCount(id);
   if (used > 0) throw new DomainError(`«${item.name}» выбран в карточках (${used}). Сначала уберите его из групп.`);
+  await db.delete(nomenclatureKitLinks).where(eq(nomenclatureKitLinks.itemId, id));
   if (item.imagePath) await deleteStored(item.imagePath);
   await db.delete(kitItems).where(eq(kitItems.id, id));
 }
 
 async function kitLinkCount(id: string) {
-  const [row] = await db
-    .select({ n: sql<number>`count(*)::int` })
-    .from(nomenclatureKitLinks)
-    .where(eq(nomenclatureKitLinks.itemId, id));
+  const [row] = await liveKitLinks(id);
   return Number(row?.n ?? 0);
 }
 

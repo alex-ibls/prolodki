@@ -22,7 +22,6 @@ async function AdminFrame({ children }: { children: React.ReactNode }) {
           ...(user.staffRole === "manager"
             ? [
                 { href: "/admin/crm", label: "Клиенты" },
-                { href: "/admin/crm/deals", label: "Сделки" },
                 { href: "/admin/catalog", label: "Каталог" },
                 { href: "/admin/brands", label: "Бренды" },
                 { href: "/admin/nomenclature", label: "Номенклатура" },

@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, ilike, inArray, isNotNull, isNull, or, sql, type SQL, type SQLWrapper } from "drizzle-orm";
 import { db } from "@/db";
-import { categories, customers, deals, kitItems, listings, nomenclature, orderItems, orders } from "@/db/schema";
+import { categories, customers, kitItems, listings, nomenclature, orderItems, orders } from "@/db/schema";
 import {
   adminExportLimit,
   adminPageSize,
@@ -16,13 +16,12 @@ import { allCategories } from "@/lib/catalog";
 import { formatDate, formatOffer, formatRub, orderCode } from "@/lib/format";
 import {
   customerSourceLabel,
-  dealStatusLabel,
   lineStatusLabel,
   listingStatusLabel,
   sourceLabel,
 } from "@/lib/labels";
 import { kitUsageCounts } from "@/lib/kit";
-import { deriveOrderStatus } from "@/lib/orders";
+import { deriveOrderStatus, orderStatusValues } from "@/lib/orders";
 import { availableOf, companyOrg } from "@/lib/stock";
 import { allBrands, categoryPath, type CategoryNode } from "@/lib/taxonomy";
 
@@ -40,9 +39,8 @@ export type AdminPage = {
   filters: Record<string, string>;
 };
 
-const dealStatuses = ["new", "in_progress", "invoiced", "won", "lost"] as const;
 const customerSources = ["registration", "order", "manual"] as const;
-const lineStatuses = ["placed", "confirmed", "completed", "cancelled"] as const;
+const lineStatuses = orderStatusValues;
 const listingStatuses = ["draft", "pending_review", "published", "rejected", "reserved", "archived"] as const;
 const emptyId = "00000000-0000-0000-0000-000000000000";
 
@@ -53,14 +51,6 @@ export const customerColumns: AdminColumn[] = [
   { key: "city", label: "Город", sort: "city", firstDir: "asc" },
   { key: "source", label: "Источник" },
   { key: "created", label: "Создан", sort: "created", firstDir: "desc" },
-];
-
-export const dealColumns: AdminColumn[] = [
-  { key: "title", label: "Сделка", sort: "title", firstDir: "asc" },
-  { key: "customer", label: "Клиент" },
-  { key: "status", label: "Статус" },
-  { key: "amount", label: "Сумма", sort: "amount", firstDir: "desc" },
-  { key: "updated", label: "Обновлена", sort: "updated", firstDir: "desc" },
 ];
 
 export const catalogColumns: AdminColumn[] = [
@@ -152,55 +142,6 @@ export async function listCustomers(one: Reader, scope?: Scope): Promise<AdminPa
       },
     }));
   });
-}
-
-export async function listDeals(one: Reader, scope?: Scope): Promise<AdminPage> {
-  const state = readList(one, ["title", "amount", "updated"], "updated");
-  const status = oneOf(one("status"), dealStatuses);
-  const pattern = state.q ? likePattern(state.q) : "";
-  const where = whereAnd(
-    status ? eq(deals.status, status) : undefined,
-    pattern ? or(ilike(deals.title, pattern), ilike(customers.name, pattern)) : undefined,
-    uuidFilter(deals.id, scope?.ids),
-  );
-  const column = state.sort === "title" ? deals.title : state.sort === "amount" ? deals.amountKopeks : deals.updatedAt;
-  return finish(
-    state,
-    scope,
-    { status },
-    async () => {
-      const [row] = await db.select({ n: count() }).from(deals).leftJoin(customers, eq(deals.customerId, customers.id)).where(where);
-      return row?.n ?? 0;
-    },
-    async (limit, offset) => {
-      const rows = await db
-        .select({
-          id: deals.id,
-          title: deals.title,
-          amountKopeks: deals.amountKopeks,
-          status: deals.status,
-          updatedAt: deals.updatedAt,
-          customerName: customers.name,
-        })
-        .from(deals)
-        .leftJoin(customers, eq(deals.customerId, customers.id))
-        .where(where)
-        .orderBy(state.dir === "asc" ? asc(column) : desc(column), asc(deals.id))
-        .limit(limit)
-        .offset(offset);
-      return rows.map((row) => ({
-        id: row.id,
-        href: `/admin/crm/deals/${row.id}`,
-        cells: {
-          title: row.title,
-          customer: blank(row.customerName),
-          status: dealStatusLabel[row.status],
-          amount: formatRub(row.amountKopeks),
-          updated: when(row.updatedAt),
-        },
-      }));
-    },
-  );
 }
 
 export async function listCatalog(one: Reader, scope?: Scope): Promise<AdminPage> {
@@ -500,7 +441,6 @@ export async function listModeration(one: Reader, scope?: Scope): Promise<AdminP
 
 const exporters = {
   customers: { file: "клиенты.xlsx", columns: customerColumns, load: listCustomers },
-  deals: { file: "сделки.xlsx", columns: dealColumns, load: listDeals },
   catalog: { file: "каталог.xlsx", columns: catalogColumns, load: listCatalog },
   brands: { file: "бренды.xlsx", columns: brandColumns, load: listBrands },
   kit: { file: "комплектации.xlsx", columns: kitColumns, load: listKit },
