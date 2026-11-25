@@ -66,31 +66,20 @@ export function highlightSpecs(item: { attributes: SpecSource[] }) {
 
 export function HighlightSpecs({ items }: { items: SpecSource[] }) {
   if (items.length === 0) return null;
-  const columns =
-    items.length >= 5
-      ? "grid-cols-5"
-      : items.length === 4
-        ? "grid-cols-4"
-        : items.length === 3
-          ? "grid-cols-3"
-          : items.length === 2
-            ? "grid-cols-2"
-            : "grid-cols-1";
   return (
-    <ul className={`grid ${columns} gap-2 rounded-[6px] border border-line bg-white p-3 text-deep`}>
+    <ul className="flex max-w-full flex-wrap gap-1.5">
       {items.map((spec) => {
         const text = spec.valueText?.trim() ?? "";
         const raw = text || (spec.valueNumber === null ? "" : String(spec.valueNumber));
         const unit = spec.definition.unit.trim();
         const value = unit && raw.endsWith(unit) ? raw.slice(0, -unit.length).trim() : raw;
         return (
-          <li key={spec.definition.code} className="flex min-w-0 flex-col items-center gap-1 px-1 py-2 text-center sm:px-2">
-            <SpecIcon icon={spec.definition.icon || ""} className="h-5 w-5 sm:h-6 sm:w-6" />
-            <span className="font-display text-lg font-extrabold leading-none sm:text-xl">
+          <li key={spec.definition.code} className="flex min-w-0 flex-col items-center rounded-full border border-line bg-white px-3 py-1 text-center shadow-[0_6px_16px_rgba(15,23,42,0.35)]">
+            <span className="text-[10px] leading-3 text-muted">{spec.definition.name}</span>
+            <span className="text-sm font-semibold leading-4 text-deep">
               {value}
-              {unit ? <span className="ml-1 text-sm font-semibold sm:text-base">{unit}</span> : null}
+              {unit ? <span className="ml-0.5 text-xs font-medium">{unit}</span> : null}
             </span>
-            <span className="text-[11px] leading-4 sm:text-xs">{spec.definition.name}</span>
           </li>
         );
       })}

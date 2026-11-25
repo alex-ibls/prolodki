@@ -5,7 +5,7 @@ import { toggleFavoriteAction, toggleFavoriteQuietAction } from "@/actions/activ
 import { HeartIcon, ShareIcon } from "@/components/action-icons";
 
 const iconButtonClass =
-  "inline-flex h-10 w-10 items-center justify-center rounded-[6px] border border-line bg-white text-navy hover:border-navy";
+  "inline-flex h-10 w-10 items-center justify-center rounded-[6px] border border-moss bg-white text-sm font-semibold text-moss hover:border-moss-hover hover:text-moss-hover";
 const photoIconClass =
   "inline-flex h-9 w-9 items-center justify-center text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]";
 
@@ -31,7 +31,7 @@ export function FavoriteButton({
   const shown = stay ? pressed : saved;
   const label = shown ? "В избранном" : "В избранное";
   const className = labeled
-    ? `${iconButtonClass} text-sm font-semibold md:h-auto md:w-auto md:gap-2 md:px-3 md:py-2`
+    ? `${iconButtonClass} md:h-auto md:w-auto md:gap-2 md:px-3 md:py-2`
     : photoIconClass;
 
   function keep() {
@@ -100,7 +100,7 @@ export function ShareButton({ title }: { title: string }) {
     <div className="relative">
       <button
         type="button"
-        className="inline-flex h-10 w-10 items-center justify-center rounded-[6px] border border-line bg-white text-sm font-semibold text-navy hover:border-navy md:h-auto md:w-auto md:gap-2 md:px-3 md:py-2"
+        className={`${iconButtonClass} md:h-auto md:w-auto md:gap-2 md:px-3 md:py-2`}
         aria-label="Поделиться"
         aria-haspopup="menu"
         aria-expanded={open}

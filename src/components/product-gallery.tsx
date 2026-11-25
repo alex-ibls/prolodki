@@ -157,17 +157,20 @@ export function ProductGallery({
   if (!photo) {
     return (
       <div>
-        <div className={`relative -mx-3 overflow-hidden bg-foam sm:mx-0 ${attached ? "rounded-b-[6px]" : "rounded-[6px]"}`}>
-          <PhotoFrame className="aspect-[4/3] w-full" />
+        <div className="relative -mx-3 sm:mx-0">
+          <div className={`relative overflow-hidden bg-foam ${attached ? "rounded-b-[6px]" : "rounded-[6px]"}`}>
+            <PhotoFrame className="aspect-[4/3] w-full" />
+          </div>
+          <PhotoCorner>{children}</PhotoCorner>
         </div>
-        {children}
       </div>
     );
   }
 
   return (
     <div>
-      <div className={`relative -mx-3 overflow-hidden bg-foam sm:mx-0 ${attached ? "rounded-b-[6px]" : "rounded-[6px]"}`}>
+      <div className="relative -mx-3 sm:mx-0">
+      <div className={`relative overflow-hidden bg-foam ${attached ? "rounded-b-[6px]" : "rounded-[6px]"}`}>
         <div
           ref={strip}
           className={`flex select-none overflow-x-auto [scrollbar-width:none] md:cursor-grab [&::-webkit-scrollbar]:hidden ${panning ? "snap-none md:cursor-grabbing" : "snap-x snap-mandatory"}`}
@@ -201,6 +204,8 @@ export function ProductGallery({
           </>
         ) : null}
       </div>
+        <PhotoCorner>{children}</PhotoCorner>
+      </div>
       {images.length > 1 ? (
         <div className="mt-2 flex gap-2 overflow-x-auto px-0.5 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {images.map((image, imageIndex) => (
@@ -216,7 +221,6 @@ export function ProductGallery({
           ))}
         </div>
       ) : null}
-      {children}
       {open ? (
         <div className="fixed inset-0 z-[70] flex flex-col bg-paper text-ink" role="dialog" aria-modal="true" aria-label={title}>
           <div className="flex items-center gap-3 border-b border-line bg-white px-3 py-2">
@@ -301,6 +305,11 @@ export function ProductGallery({
       ) : null}
     </div>
   );
+}
+
+function PhotoCorner({ children }: { children?: React.ReactNode }) {
+  if (!children) return null;
+  return <div className="pointer-events-none absolute top-3 left-3 z-10 max-w-[calc(100%-1.5rem)]">{children}</div>;
 }
 
 function viewerModeClass(active: boolean) {

@@ -61,7 +61,7 @@ export function CompareButton({ id, variant = "inline" }: { id: string; variant?
         className={
           variant === "card"
             ? "inline-flex h-9 w-9 items-center justify-center bg-transparent text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]"
-            : "inline-flex h-10 w-10 items-center justify-center rounded-[6px] border border-line bg-white text-sm font-semibold text-navy hover:border-navy md:h-auto md:w-auto md:gap-2 md:px-3 md:py-2"
+            : "inline-flex h-10 w-10 items-center justify-center rounded-[6px] border border-moss bg-white text-sm font-semibold text-moss hover:border-moss-hover hover:text-moss-hover md:h-auto md:w-auto md:gap-2 md:px-3 md:py-2"
         }
         onMouseDown={variant === "card" ? (event) => event.preventDefault() : undefined}
         onClick={() => {

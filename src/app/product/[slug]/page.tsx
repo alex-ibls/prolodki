@@ -95,14 +95,15 @@ export default async function ProductPage({
                 />
               </div>
             ) : null}
-            {highlights.length ? <HighlightSpecs items={highlights} /> : null}
             <ProductFacts description={item.description} specs={specs} />
             <ProductGroups />
           </div>
         </div>
         <div className="contents md:col-start-1 md:row-start-1 md:flex md:flex-col md:gap-4">
           <div className="order-2 md:order-none">
-            <ProductGallery title={item.title} images={item.images} />
+            <ProductGallery title={item.title} images={item.images}>
+              {highlights.length ? <HighlightSpecs items={highlights} /> : null}
+            </ProductGallery>
           </div>
           <ProductCost />
         </div>

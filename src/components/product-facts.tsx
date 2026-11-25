@@ -49,7 +49,7 @@ function TabButton({
       role="tab"
       id={`product-tab-${id}`}
       aria-selected={active}
-      className={`border-b-2 px-1 py-2 text-sm font-semibold ${active ? "border-navy text-deep" : "border-transparent text-muted"}`}
+      className={`border-b-2 px-1 py-2 text-sm font-semibold ${active ? "border-moss text-deep" : "border-transparent text-muted"}`}
       onClick={onClick}
     >
       {children}
