@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
   },
   serverExternalPackages: ["nodemailer", "sharp"],
   experimental: {
+    agentUpgrade: "security",
     serverActions: {
       bodySizeLimit: "220mb",
     },
