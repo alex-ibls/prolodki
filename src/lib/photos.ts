@@ -8,6 +8,7 @@ import { assertPhotoRoom, deleteStored, maxPhotos, photoFiles, removedPhotoIds, 
 export async function attachNomenclaturePhotos(nomenclatureId: string, formData: FormData) {
   const removed = await takeNomenclaturePhotos(nomenclatureId, removedPhotoIds(formData));
   const files = photoFiles(formData);
+  const insertedIds: string[] = [];
   if (files.length > 0) {
     const current = await db
       .select({ id: nomenclatureImages.id })
@@ -24,12 +25,44 @@ export async function attachNomenclaturePhotos(nomenclatureId: string, formData:
     for (const file of files) {
       const stored = await savePhoto(nomenclatureIdFolder(nomenclatureId), file);
       if (!stored) continue;
-      await db.insert(nomenclatureImages).values({ nomenclatureId, path: stored, sort });
+      const [created] = await db.insert(nomenclatureImages).values({ nomenclatureId, path: stored, sort }).returning({ id: nomenclatureImages.id });
+      insertedIds.push(created.id);
       sort += 1;
     }
   }
+  await applyNomenclaturePhotoOrder(nomenclatureId, formData.getAll("photoOrder").map(String), insertedIds);
   await mirrorNomenclaturePhotos(nomenclatureId);
   for (const path of removed) await releaseStoredPhoto(path);
+}
+
+export async function reorderNomenclaturePhotos(nomenclatureId: string, ids: string[]) {
+  if (ids.length === 0) return;
+  await applyNomenclaturePhotoOrder(nomenclatureId, ids, []);
+  await mirrorNomenclaturePhotos(nomenclatureId);
+}
+
+async function applyNomenclaturePhotoOrder(nomenclatureId: string, tokens: string[], insertedIds: string[]) {
+  if (tokens.length === 0) return;
+  const current = await db
+    .select({ id: nomenclatureImages.id })
+    .from(nomenclatureImages)
+    .where(eq(nomenclatureImages.nomenclatureId, nomenclatureId))
+    .orderBy(asc(nomenclatureImages.sort));
+  const known = new Set(current.map((row) => row.id));
+  const ranked: string[] = [];
+  for (const token of tokens) {
+    const index = Number(token.slice(4));
+    const id = token.startsWith("new:") ? (Number.isInteger(index) && index >= 0 ? insertedIds[index] : undefined) : token;
+    if (!id || !known.has(id) || ranked.includes(id)) continue;
+    ranked.push(id);
+  }
+  for (const row of current) if (!ranked.includes(row.id)) ranked.push(row.id);
+  for (let sort = 0; sort < ranked.length; sort += 1) {
+    await db
+      .update(nomenclatureImages)
+      .set({ sort })
+      .where(and(eq(nomenclatureImages.id, ranked[sort]), eq(nomenclatureImages.nomenclatureId, nomenclatureId)));
+  }
 }
 
 async function takeNomenclaturePhotos(nomenclatureId: string, ids: string[]) {

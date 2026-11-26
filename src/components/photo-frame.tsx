@@ -14,7 +14,7 @@ export function PhotoFrame({ path, alt = "", className = "" }: { path?: string |
   return (
     // Local uploads are served by the app route and are not part of the image optimizer.
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={photoSrc(path)} alt={alt} className={className} onError={() => setBroken(true)} />
+    <img src={photoSrc(path)} alt={alt} draggable={false} className={className} onError={() => setBroken(true)} />
   );
 }
 

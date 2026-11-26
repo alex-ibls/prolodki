@@ -120,7 +120,7 @@ export async function NomenclatureForm({ item, error }: { item?: Item; error?: s
         Описание
         <LimitedText name="description" defaultValue={item?.description} />
       </div>
-      <PhotoField images={item?.images} />
+      <PhotoField images={item?.images} orderable nomenclatureId={item?.id} />
       <KitEditor library={library} initial={kit} />
       <label className="flex items-center gap-2 text-sm">
         <input name="publish" type="checkbox" defaultChecked={item?.isPublished ?? true} />

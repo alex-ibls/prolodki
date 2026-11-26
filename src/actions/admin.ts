@@ -14,7 +14,7 @@ import { saveNomenclatureKit } from "@/lib/kit";
 import { defsForCategory, readAttributeValues, readLogisticsAndLead } from "@/lib/listings";
 import { assertLeafCategory, ensureBrandName } from "@/lib/taxonomy";
 import { importNomenclatureSheet, saveNomenclatureItem, type ImportReport } from "@/lib/nomenclature";
-import { attachNomenclaturePhotos } from "@/lib/photos";
+import { attachNomenclaturePhotos, reorderNomenclaturePhotos } from "@/lib/photos";
 
 export async function moderateAction(formData: FormData) {
   await runAction("/admin/moderation", async (user) => {
@@ -170,6 +170,25 @@ export async function importWorkbookAction(_prev: ImportState, formData: FormDat
     return await importNomenclatureSheet(user.id, records);
   } catch (error) {
     return { error: error instanceof DomainError ? error.message : "Не удалось прочитать файл" };
+  }
+}
+
+export async function reorderNomenclaturePhotosAction(nomenclatureId: string, ids: string[]) {
+  try {
+    await requireManager();
+    if (!nomenclatureId || ids.length === 0) return { error: null };
+    await reorderNomenclaturePhotos(nomenclatureId, ids);
+    revalidatePath("/");
+    const [listing] = await db
+      .select({ slug: listings.slug })
+      .from(listings)
+      .where(eq(listings.nomenclatureId, nomenclatureId))
+      .limit(1);
+    if (listing && !listing.slug.includes("/")) revalidatePath(`/product/${listing.slug}`);
+    return { error: null };
+  } catch (error) {
+    if (isNextNavigation(error)) throw error;
+    return { error: error instanceof DomainError ? error.message : "Не получилось сохранить порядок" };
   }
 }
 
